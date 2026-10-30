@@ -24,6 +24,8 @@ Datalogger Growatt ──RS485──┬── CHINT DTSU666
 
 ## Instalación
 
+[![Añadir repositorio a mi Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fmanu8613%2FGrowSnif)
+
 1. **Ajustes → Complementos → Tienda de complementos → ⋮ → Repositorios** y añade
    `https://github.com/manu8613/GrowSnif`.
 2. Instala **GrowSnif**, rellena al menos `gateway_host`, `meter_address` y `ct_ratio`.
