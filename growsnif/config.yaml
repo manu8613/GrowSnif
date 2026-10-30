@@ -1,0 +1,45 @@
+name: GrowSnif
+version: 1.2.0
+slug: growsnif
+description: Escucha pasiva del medidor CHINT DTSU666 en el bus RS485 de Growatt y lo publica en Home Assistant por MQTT. Nunca escribe en el bus.
+url: https://github.com/manu8613/GrowSnif
+arch:
+  - amd64
+  - aarch64
+startup: application
+boot: auto
+init: false
+services:
+  - mqtt:need
+options:
+  gateway_host: ""
+  gateway_port: 4196
+  meter_address: 1
+  ct_ratio: 1
+  pt_ratio: 1
+  invert_power_sign: false
+  publish_interval: 1
+  id_prefix: growsnif
+  device_name: GrowSnif medidor
+  discovery_prefix: homeassistant
+  mqtt_host: ""
+  mqtt_port: 1883
+  mqtt_username: ""
+  mqtt_password: ""
+  log_level: info
+schema:
+  gateway_host: str
+  gateway_port: port
+  meter_address: int(1,247)
+  ct_ratio: float(0.001,100000)
+  pt_ratio: float(0.001,100000)
+  invert_power_sign: bool
+  publish_interval: int(1,60)
+  id_prefix: match(^[a-z0-9_]{1,40}$)
+  device_name: str
+  discovery_prefix: match(^[a-z0-9_]{1,40}$)
+  mqtt_host: str?
+  mqtt_port: port?
+  mqtt_username: str?
+  mqtt_password: password?
+  log_level: list(debug|info|warning|error)

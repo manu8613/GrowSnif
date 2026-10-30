@@ -1,0 +1,46 @@
+configuration:
+  gateway_host:
+    name: Pasarela RS485-TCP (host)
+    description: IP o nombre de la pasarela en modo TCP Server transparente. Obligatorio.
+  gateway_port:
+    name: Puerto de la pasarela
+    description: Puerto TCP de la pasarela.
+  meter_address:
+    name: Dirección Modbus del medidor
+    description: Dirección del CHINT en el bus (la ves en su pantalla, menú NO.).
+  ct_ratio:
+    name: Relación de los trafos de intensidad
+    description: 'Primario/secundario. Ej.: 400/5 A = 80. Pon 1 si el medidor es de conexión directa.'
+  pt_ratio:
+    name: Relación de los trafos de tensión
+    description: Normalmente 1 (sin trafos de tensión).
+  invert_power_sign:
+    name: Invertir signo de potencia
+    description: Actívalo si al importar de la red la potencia sale negativa.
+  publish_interval:
+    name: Intervalo de publicación (s)
+    description: Mínimo entre publicaciones de la potencia rápida.
+  id_prefix:
+    name: Prefijo de entidades
+    description: Forma los entity_id (sensor.<prefijo>_...) y los temas MQTT. Si ya tenías entidades, pon su prefijo para conservar el historial.
+  device_name:
+    name: Nombre del dispositivo
+    description: Nombre que verás en Home Assistant.
+  discovery_prefix:
+    name: Prefijo de MQTT Discovery
+    description: Déjalo en homeassistant salvo que lo hayas cambiado en la integración MQTT.
+  mqtt_host:
+    name: MQTT host (opcional)
+    description: Vacío = credenciales automáticas del Supervisor (Mosquitto).
+  mqtt_port:
+    name: MQTT puerto (opcional)
+    description: Solo si rellenas el host.
+  mqtt_username:
+    name: MQTT usuario (opcional)
+    description: Vacío = automático.
+  mqtt_password:
+    name: MQTT contraseña (opcional)
+    description: Vacío = automático.
+  log_level:
+    name: Nivel de log
+    description: info recomendado.

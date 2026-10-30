@@ -1,0 +1,45 @@
+name: Pruebas
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install paho-mqtt==2.1.0 pyyaml
+      - name: El complemento nunca escribe en la pasarela
+        run: "! grep -nE '\\.(send|sendall|sendto|write)\\(' growsnif/main.py growsnif/protocol.py"
+      - name: Captura sintética regenerable y estable
+        run: |
+          python tools/make_synthetic_capture.py /tmp/captura.txt
+          cmp /tmp/captura.txt tests/data/captura_sintetica.txt
+      - name: Decodificador
+        working-directory: tests
+        run: python test_protocol.py data/captura_sintetica.txt -v
+      - name: Opciones, MQTT y Discovery
+        working-directory: tests
+        run: python test_main.py -v
+      - name: Extremo a extremo (broker y pasarela simulados en 127.0.0.1)
+        working-directory: tests
+        run: python test_runtime.py
+      - name: YAML válido y opciones coherentes
+        run: |
+          python - <<'PY'
+          import glob, yaml
+          for f in glob.glob('**/*.yaml', recursive=True) + glob.glob('.github/**/*.yml', recursive=True):
+              yaml.safe_load(open(f))
+          cfg = yaml.safe_load(open('growsnif/config.yaml'))
+          for lang in ('es', 'en'):
+              tr = yaml.safe_load(open('growsnif/translations/%s.yaml' % lang))['configuration']
+              assert set(cfg['options']) == set(cfg['schema']) == set(tr), lang
+          print('YAML OK')
+          PY

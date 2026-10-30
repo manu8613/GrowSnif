@@ -1,0 +1,282 @@
+title: GrowSnif
+views:
+- title: Resumen
+  path: resumen
+  icon: mdi:transmission-tower
+  type: masonry
+  cards:
+  - type: markdown
+    content: '# GrowSnif · Red
+
+      Intercambio con la red medido por el CHINT DTSU666 · Escucha pasiva
+
+
+      Potencia: publicación ~1 s. Resto: nueva lectura ~1 min. **Positivo = importación**.
+      Si tus entidades usan otro prefijo, sustituye `growsnif_` en este YAML.'
+  - type: grid
+    columns: 3
+    square: false
+    cards:
+    - type: gauge
+      entity: sensor.growsnif_potencia_total
+      name: Balance de red · W
+      min: -50000
+      max: 100000
+      needle: true
+    - type: gauge
+      entity: sensor.growsnif_potencia_importada
+      name: Importación · W
+      min: 0
+      max: 100000
+      needle: true
+    - type: gauge
+      entity: sensor.growsnif_potencia_exportada
+      name: Exportación · W
+      min: 0
+      max: 100000
+      needle: true
+  - type: history-graph
+    title: Balance de red · última hora
+    hours_to_show: 1
+    entities:
+    - sensor.growsnif_potencia_total
+  - type: entities
+    title: Contadores de energía
+    show_header_toggle: false
+    entities:
+    - sensor.growsnif_energia_importada
+    - sensor.growsnif_energia_exportada
+  - type: statistics-graph
+    title: Importación y exportación por hora
+    entities:
+    - sensor.growsnif_energia_importada
+    - sensor.growsnif_energia_exportada
+    period: hour
+    days_to_show: 2
+    stat_types:
+    - change
+    chart_type: bar
+  - type: entities
+    title: Red
+    show_header_toggle: false
+    entities:
+    - sensor.growsnif_frecuencia
+    - sensor.growsnif_fp_total
+    - sensor.growsnif_reactiva_total
+  - type: markdown
+    content: Los rangos de los indicadores son escalas visuales; ajusta min y max a tu instalación.
+      Las gráficas se llenan desde la instalación; no se importa el histórico de Growatt.
+- title: Fases
+  path: fases
+  icon: mdi:sine-wave
+  type: masonry
+  cards:
+  - type: entities
+    title: Fase L1
+    show_header_toggle: false
+    entities:
+    - sensor.growsnif_tension_l1
+    - sensor.growsnif_corriente_l1
+    - sensor.growsnif_potencia_l1
+    - sensor.growsnif_reactiva_l1
+    - sensor.growsnif_fp_l1
+  - type: entities
+    title: Fase L2
+    show_header_toggle: false
+    entities:
+    - sensor.growsnif_tension_l2
+    - sensor.growsnif_corriente_l2
+    - sensor.growsnif_potencia_l2
+    - sensor.growsnif_reactiva_l2
+    - sensor.growsnif_fp_l2
+  - type: entities
+    title: Fase L3
+    show_header_toggle: false
+    entities:
+    - sensor.growsnif_tension_l3
+    - sensor.growsnif_corriente_l3
+    - sensor.growsnif_potencia_l3
+    - sensor.growsnif_reactiva_l3
+    - sensor.growsnif_fp_l3
+  - type: grid
+    columns: 3
+    square: false
+    cards:
+    - type: gauge
+      entity: sensor.growsnif_corriente_l1
+      name: L1 · A
+      min: 0
+      max: 200
+      needle: true
+    - type: gauge
+      entity: sensor.growsnif_corriente_l2
+      name: L2 · A
+      min: 0
+      max: 200
+      needle: true
+    - type: gauge
+      entity: sensor.growsnif_corriente_l3
+      name: L3 · A
+      min: 0
+      max: 200
+      needle: true
+  - type: history-graph
+    title: Corrientes por fase
+    hours_to_show: 24
+    entities:
+    - sensor.growsnif_corriente_l1
+    - sensor.growsnif_corriente_l2
+    - sensor.growsnif_corriente_l3
+  - type: history-graph
+    title: Potencia activa por fase
+    hours_to_show: 24
+    entities:
+    - sensor.growsnif_potencia_l1
+    - sensor.growsnif_potencia_l2
+    - sensor.growsnif_potencia_l3
+  - type: history-graph
+    title: Potencia reactiva por fase
+    hours_to_show: 24
+    entities:
+    - sensor.growsnif_reactiva_l1
+    - sensor.growsnif_reactiva_l2
+    - sensor.growsnif_reactiva_l3
+  - type: history-graph
+    title: Factor de potencia
+    hours_to_show: 24
+    entities:
+    - sensor.growsnif_fp_total
+    - sensor.growsnif_fp_l1
+    - sensor.growsnif_fp_l2
+    - sensor.growsnif_fp_l3
+  - type: history-graph
+    title: Potencia aparente por fase
+    hours_to_show: 24
+    entities:
+    - sensor.growsnif_aparente_l1
+    - sensor.growsnif_aparente_l2
+    - sensor.growsnif_aparente_l3
+- title: Tensiones
+  path: tensiones
+  icon: mdi:flash
+  type: masonry
+  cards:
+  - type: entities
+    title: Tensiones fase-neutro
+    show_header_toggle: false
+    entities:
+    - sensor.growsnif_tension_l1
+    - sensor.growsnif_tension_l2
+    - sensor.growsnif_tension_l3
+  - type: entities
+    title: Tensiones entre fases
+    show_header_toggle: false
+    entities:
+    - sensor.growsnif_tension_ab
+    - sensor.growsnif_tension_bc
+    - sensor.growsnif_tension_ca
+  - type: history-graph
+    title: Fase-neutro · V
+    hours_to_show: 24
+    entities:
+    - sensor.growsnif_tension_l1
+    - sensor.growsnif_tension_l2
+    - sensor.growsnif_tension_l3
+  - type: history-graph
+    title: Entre fases · V
+    hours_to_show: 24
+    entities:
+    - sensor.growsnif_tension_ab
+    - sensor.growsnif_tension_bc
+    - sensor.growsnif_tension_ca
+  - type: gauge
+    entity: sensor.growsnif_frecuencia
+    name: Frecuencia · Hz
+    min: 49
+    max: 51
+    needle: true
+  - type: history-graph
+    title: Frecuencia
+    hours_to_show: 24
+    entities:
+    - sensor.growsnif_frecuencia
+- title: Energía
+  path: energia
+  icon: mdi:lightning-bolt
+  type: masonry
+  cards:
+  - type: entities
+    title: Energía acumulada de red
+    show_header_toggle: false
+    entities:
+    - sensor.growsnif_energia_importada
+    - sensor.growsnif_energia_exportada
+  - type: statistics-graph
+    title: Energía por día · kWh
+    entities:
+    - sensor.growsnif_energia_importada
+    - sensor.growsnif_energia_exportada
+    period: day
+    days_to_show: 30
+    stat_types:
+    - change
+    chart_type: bar
+  - type: statistics-graph
+    title: Potencia de red · media/mínimo/máximo
+    entities:
+    - sensor.growsnif_potencia_total
+    period: hour
+    days_to_show: 7
+    stat_types:
+    - mean
+    - min
+    - max
+    chart_type: line
+  - type: markdown
+    content: 'En el panel Energía selecciona **Energía importada** en Consumo de la
+      red y **Energía exportada** en Devolución a la red. Son acumulados absolutos:
+      Home Assistant contabiliza los incrementos desde la incorporación. Estos sensores
+      no son producción fotovoltaica.'
+- title: Todos los datos
+  path: datos
+  icon: mdi:table
+  type: masonry
+  cards:
+  - type: entities
+    title: 24 magnitudes medidas
+    show_header_toggle: false
+    entities:
+    - sensor.growsnif_energia_importada
+    - sensor.growsnif_energia_exportada
+    - sensor.growsnif_tension_ab
+    - sensor.growsnif_tension_bc
+    - sensor.growsnif_tension_ca
+    - sensor.growsnif_tension_l1
+    - sensor.growsnif_tension_l2
+    - sensor.growsnif_tension_l3
+    - sensor.growsnif_corriente_l1
+    - sensor.growsnif_corriente_l2
+    - sensor.growsnif_corriente_l3
+    - sensor.growsnif_potencia_total
+    - sensor.growsnif_potencia_l1
+    - sensor.growsnif_potencia_l2
+    - sensor.growsnif_potencia_l3
+    - sensor.growsnif_reactiva_total
+    - sensor.growsnif_reactiva_l1
+    - sensor.growsnif_reactiva_l2
+    - sensor.growsnif_reactiva_l3
+    - sensor.growsnif_fp_total
+    - sensor.growsnif_fp_l1
+    - sensor.growsnif_fp_l2
+    - sensor.growsnif_fp_l3
+    - sensor.growsnif_frecuencia
+  - type: entities
+    title: 6 magnitudes derivadas
+    show_header_toggle: false
+    entities:
+    - sensor.growsnif_potencia_importada
+    - sensor.growsnif_potencia_exportada
+    - sensor.growsnif_aparente_total
+    - sensor.growsnif_aparente_l1
+    - sensor.growsnif_aparente_l2
+    - sensor.growsnif_aparente_l3

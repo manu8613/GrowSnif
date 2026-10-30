@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+# Capturas reales y opciones locales: contienen datos de tu instalación
+captures/
+options.json
+*.local.*

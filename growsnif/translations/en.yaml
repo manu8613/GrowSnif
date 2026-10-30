@@ -1,0 +1,46 @@
+configuration:
+  gateway_host:
+    name: RS485-TCP gateway host
+    description: IP or hostname of the gateway in transparent TCP Server mode. Required.
+  gateway_port:
+    name: Gateway port
+    description: Gateway TCP port.
+  meter_address:
+    name: Meter Modbus address
+    description: Address of the CHINT on the bus (shown on its display, NO. menu).
+  ct_ratio:
+    name: Current transformer ratio
+    description: Primary/secondary, e.g. 400/5 A = 80. Use 1 for direct-connection meters.
+  pt_ratio:
+    name: Voltage transformer ratio
+    description: Usually 1 (no voltage transformers).
+  invert_power_sign:
+    name: Invert power sign
+    description: Enable if power is negative while importing from the grid.
+  publish_interval:
+    name: Publish interval (s)
+    description: Minimum time between fast power updates.
+  id_prefix:
+    name: Entity prefix
+    description: Builds entity_ids (sensor.<prefix>_...) and MQTT topics. Reuse an old prefix to keep history.
+  device_name:
+    name: Device name
+    description: Name shown in Home Assistant.
+  discovery_prefix:
+    name: MQTT Discovery prefix
+    description: Keep homeassistant unless you changed it in the MQTT integration.
+  mqtt_host:
+    name: MQTT host (optional)
+    description: Empty = automatic credentials from the Supervisor (Mosquitto).
+  mqtt_port:
+    name: MQTT port (optional)
+    description: Only if you set the host.
+  mqtt_username:
+    name: MQTT username (optional)
+    description: Empty = automatic.
+  mqtt_password:
+    name: MQTT password (optional)
+    description: Empty = automatic.
+  log_level:
+    name: Log level
+    description: info recommended.
