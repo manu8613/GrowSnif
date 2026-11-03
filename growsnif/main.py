@@ -19,7 +19,7 @@ import paho.mqtt.client as mqtt
 
 from protocol import DERIVED, REGS, Decoder, apparent_power, convert
 
-VERSION = '1.2.0'
+VERSION = '1.3.0'
 SUPERVISOR_MQTT = 'http://supervisor/services/mqtt'
 FAST = ('potencia_total', 'potencia_importada', 'potencia_exportada')
 FAST_EXPIRE, SLOW_EXPIRE = 10, 180
@@ -30,6 +30,10 @@ DEFAULTS = {
     'ct_ratio': 1.0, 'pt_ratio': 1.0, 'invert_power_sign': False, 'publish_interval': 1,
     'id_prefix': 'growsnif', 'device_name': 'GrowSnif medidor', 'discovery_prefix': 'homeassistant',
     'mqtt_host': '', 'mqtt_port': 1883, 'mqtt_username': '', 'mqtt_password': '', 'log_level': 'info',
+    # Inverter channel (optional, off by default: existing installations do not change)
+    'inverter_enabled': False, 'inverter_host': '', 'inverter_port': 4197, 'inverter_address': 1,
+    'inverter_mppts': 2, 'inverter_strings': 0, 'inverter_id_prefix': 'growsnif_inversor',
+    'inverter_device_name': 'GrowSnif inversor',
 }
 
 
@@ -49,6 +53,21 @@ def load_options(path=None):
     for key in ('id_prefix', 'discovery_prefix'):
         if not re.fullmatch(r'[a-z0-9_]{1,40}', str(opts[key])):
             errors.append(key + ': solo minúsculas, números y _ (máx. 40)')
+    if opts['inverter_enabled']:
+        if not re.fullmatch(r'[a-z0-9_]{1,40}', str(opts['inverter_id_prefix'])):
+            errors.append('inverter_id_prefix: solo minúsculas, números y _ (máx. 40)')
+        if opts['inverter_id_prefix'] == opts['id_prefix']:
+            errors.append('inverter_id_prefix debe ser distinto de id_prefix')
+        if not 1 <= int(opts['inverter_address']) <= 247:
+            errors.append('inverter_address debe estar entre 1 y 247')
+        if not 1 <= int(opts['inverter_mppts']) <= 16:
+            errors.append('inverter_mppts debe estar entre 1 y 16')
+        if not 0 <= int(opts['inverter_strings']) <= 32:
+            errors.append('inverter_strings debe estar entre 0 y 32')
+        inv_host = str(opts['inverter_host'] or '').strip() or str(opts['gateway_host']).strip()
+        if (inv_host, int(opts['inverter_port'])) == (str(opts['gateway_host']).strip(), int(opts['gateway_port'])):
+            errors.append('el inversor necesita su propio canal: inverter_host/inverter_port no pueden ser '
+                          'los mismos que gateway_host/gateway_port')
     if errors:
         raise ValueError('; '.join(errors))
     return opts
@@ -128,6 +147,12 @@ def main():
     prefix, disc = opts['id_prefix'], opts['discovery_prefix']
     interval = float(opts['publish_interval'])
     host, port, user, password = resolve_mqtt(opts)
+    inverter_thread = None
+    if opts['inverter_enabled']:
+        import inverter  # only needed when the inverter channel is on
+        inverter_thread = threading.Thread(target=inverter.run, name='inversor',
+                                           args=(opts, STOP, (host, port, user, password), VERSION), daemon=True)
+        inverter_thread.start()
 
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=prefix + '_growsnif')
     client.username_pw_set(user, password)
@@ -226,6 +251,9 @@ def main():
                              decoder.exceptions, len(cache))
                 last_log = now
     finally:
+        STOP.set()
+        if inverter_thread:
+            inverter_thread.join(timeout=5)
         if sock:
             sock.close()
         if client.is_connected():

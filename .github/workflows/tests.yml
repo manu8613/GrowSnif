@@ -17,7 +17,7 @@ jobs:
           python-version: "3.13"
       - run: pip install paho-mqtt==2.1.0 pyyaml
       - name: El complemento nunca escribe en la pasarela
-        run: "! grep -nE '\\.(send|sendall|sendto|write)\\(' growsnif/main.py growsnif/protocol.py"
+        run: "! grep -nE '\\.(send|sendall|sendto|write)\\(' growsnif/*.py"
       - name: Captura sintética regenerable y estable
         run: |
           python tools/make_synthetic_capture.py /tmp/captura.txt
@@ -25,12 +25,18 @@ jobs:
       - name: Decodificador
         working-directory: tests
         run: python test_protocol.py data/captura_sintetica.txt -v
+      - name: Decodificador del inversor
+        working-directory: tests
+        run: python test_growatt.py -v
       - name: Opciones, MQTT y Discovery
         working-directory: tests
         run: python test_main.py -v
       - name: Extremo a extremo (broker y pasarela simulados en 127.0.0.1)
         working-directory: tests
         run: python test_runtime.py
+      - name: Extremo a extremo con el inversor (medidor sin cambios, cero bytes a las pasarelas)
+        working-directory: tests
+        run: python test_runtime_inversor.py
       - name: YAML válido y opciones coherentes
         run: |
           python - <<'PY'

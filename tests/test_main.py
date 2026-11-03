@@ -47,6 +47,19 @@ class MainTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.load(gateway_host='gw', meter_address=300)
 
+    def test_inverter_options(self):
+        o = self.load(gateway_host='gw')
+        self.assertFalse(o['inverter_enabled'])           # 1.2.0 options: nothing changes
+        o = self.load(gateway_host='gw', inverter_enabled=True, inverter_port=4197)
+        self.assertEqual(o['inverter_id_prefix'], 'growsnif_inversor')
+        with self.assertRaises(ValueError):                # same channel as the meter
+            self.load(gateway_host='gw', inverter_enabled=True, inverter_port=4196)
+        with self.assertRaises(ValueError):                # same prefix as the meter
+            self.load(gateway_host='gw', inverter_enabled=True, inverter_id_prefix='growsnif')
+        with self.assertRaises(ValueError):
+            self.load(gateway_host='gw', inverter_enabled=True, inverter_mppts=0)
+        self.load(gateway_host='gw', inverter_enabled=False, inverter_port=4196)  # ignored when off
+
     def test_discovery(self):
         d = main.discovery(opts(id_prefix='mi_medidor', meter_address=7, device_name='Red'))
         self.assertEqual(len(d), 30)

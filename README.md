@@ -1,25 +1,28 @@
 # GrowSnif
 
-**Escucha pasiva del medidor CHINT DTSU666 en instalaciones Growatt, para Home Assistant.**
+**Escucha pasiva del medidor CHINT DTSU666 y del inversor en instalaciones Growatt, para Home Assistant.**
 
-*Passive sniffer for the CHINT DTSU666 smart meter on Growatt RS485 buses. It reads the
-traffic between the Growatt datalogger and the meter through a transparent RS485-to-TCP
-gateway and publishes 30 sensors to Home Assistant via MQTT Discovery. It never writes
-to the bus, so export limitation keeps working untouched.*
+*Passive sniffer for Growatt RS485 buses. It reads the traffic between the Growatt
+datalogger and the CHINT DTSU666 meter, and optionally the inverter, through a transparent
+RS485-to-TCP gateway and publishes the values to Home Assistant via MQTT Discovery. It
+never writes to the buses, so export limitation keeps working untouched.*
 
 ## Por qué
 
 En muchas instalaciones Growatt el datalogger (ShineMaster, ShineWiLan…) es el maestro del
 bus RS485 y pregunta al medidor varias veces por segundo para la limitación de vertido.
 Poner un segundo maestro en ese bus provoca colisiones. GrowSnif no pregunta nada: escucha
-las respuestas que ya circulan y las convierte en sensores.
+las respuestas que ya circulan y las convierte en sensores. Con una pasarela de varios
+canales escucha también el bus del inversor y tienes la producción en local, sin nube.
 
 ```
-Datalogger Growatt ──RS485──┬── CHINT DTSU666
-                            │
-                  Pasarela RS485→TCP (solo escucha)
-                            │ TCP
-                   Home Assistant · GrowSnif ──MQTT──> sensores
+                   ┌─RS485-1─┬── Inversor Growatt
+Datalogger Growatt ┤         │
+                   └─RS485-2─┼──┬── CHINT DTSU666
+                             │  │
+              Pasarela RS485→TCP, un canal por bus (solo escucha)
+                             │ TCP
+                  Home Assistant · GrowSnif ──MQTT──> sensores
 ```
 
 ## Instalación
@@ -29,17 +32,27 @@ Datalogger Growatt ──RS485──┬── CHINT DTSU666
 1. **Ajustes → Complementos → Tienda de complementos → ⋮ → Repositorios** y añade
    `https://github.com/manu8613/GrowSnif`.
 2. Instala **GrowSnif**, rellena al menos `gateway_host`, `meter_address` y `ct_ratio`.
-3. Arranca. Las entidades aparecen en el dispositivo MQTT con el nombre que elijas.
+   Para el inversor, activa `inverter_enabled` y pon el puerto de su canal.
+3. Arranca. Las entidades aparecen en los dispositivos MQTT con los nombres que elijas.
 
 Instrucciones completas, opciones y solución de problemas en
 [growsnif/DOCS.md](growsnif/DOCS.md). Hay un panel de ejemplo en
-[dashboards/dashboard_growsnif.yaml](dashboards/dashboard_growsnif.yaml).
+[dashboards/](dashboards/), y `tools/make_dashboard.py` genera uno con tus prefijos.
 
 ## Sensores
+
+**Medidor (30)**
 
 | Del bus (24) | Calculados (6) |
 |---|---|
 | Tensión L1/L2/L3 y AB/BC/CA, corriente L1–L3, potencia activa y reactiva (total y por fase), factor de potencia (total y por fase), frecuencia, energía importada y exportada | Potencia importada, potencia exportada, potencia aparente (total y por fase) |
+
+**Inversor (opcional, ~45 + 5 por MPPT + 2 por string)**
+
+Potencia AC y FV, energía hoy y total, salida AC por fase, reactiva y factor de potencia,
+estado, motivo de limitación, límite antivertido que escribe el datalogger, temperaturas,
+aislamiento, corriente de fuga, y por cada MPPT y string su tensión, corriente y energía,
+con aviso de strings desconectados. Probado con un Growatt MAX TL3-X.
 
 ## Seguridad
 
@@ -58,8 +71,10 @@ Instrucciones completas, opciones y solución de problemas en
 pip install paho-mqtt==2.1.0 pyyaml
 cd tests
 python test_protocol.py data/captura_sintetica.txt
+python test_growatt.py
 python test_main.py
 python test_runtime.py
+python test_runtime_inversor.py
 ```
 
 Capturar tu propio bus (solo lectura):
@@ -70,7 +85,7 @@ python tools/capture.py --host <pasarela> --port 4196 --minutes 10 -o captures/b
 
 ## Hoja de ruta
 
-- Escucha del bus datalogger ↔ inversor Growatt para tener la producción en local.
+- ~~Escucha del bus datalogger ↔ inversor Growatt para tener la producción en local.~~ (1.3.0)
 
 ## Licencia
 

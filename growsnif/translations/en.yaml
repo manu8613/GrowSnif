@@ -44,3 +44,27 @@ configuration:
   log_level:
     name: Log level
     description: info recommended.
+  inverter_enabled:
+    name: Inverter - enable
+    description: Also listen to the datalogger ↔ Growatt inverter bus through a second gateway channel. Off changes nothing.
+  inverter_host:
+    name: Inverter - gateway host
+    description: Empty = same as gateway_host (multi-channel gateway).
+  inverter_port:
+    name: Inverter - channel port
+    description: TCP port of the channel wired to the inverter bus. Must differ from the meter one.
+  inverter_address:
+    name: Inverter - Modbus address
+    description: Inverter address on its bus (shown on its display or in the datalogger web page). Usually 1.
+  inverter_mppts:
+    name: Inverter - number of MPPTs
+    description: MPPT inputs to show (1-16). See the inverter datasheet.
+  inverter_strings:
+    name: Inverter - number of strings
+    description: Strings to monitor (0-32). 0 = no per-string sensors and no disconnected-string report.
+  inverter_id_prefix:
+    name: Inverter - entity prefix
+    description: Builds the entity_id (sensor.<prefix>_...). Must differ from id_prefix.
+  inverter_device_name:
+    name: Inverter - device name
+    description: Name shown in Home Assistant.

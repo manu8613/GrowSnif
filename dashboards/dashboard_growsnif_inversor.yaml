@@ -1,0 +1,152 @@
+title: GrowSnif inversor
+views:
+- title: Inversor
+  path: inversor
+  icon: mdi:solar-power-variant
+  type: masonry
+  cards:
+  - type: markdown
+    content: '# Inversor · producción
+
+
+      Escucha pasiva del bus datalogger ↔ inversor. Potencia AC cada ~3 s; el resto, ~1 min. **Sin respuesta** = inversor
+      apagado (noche).'
+  - type: grid
+    columns: 3
+    square: false
+    cards:
+    - type: gauge
+      entity: sensor.growsnif_inversor_potencia_ac
+      name: Potencia AC · W
+      min: 0
+      max: 110000
+      needle: true
+    - type: gauge
+      entity: sensor.growsnif_inversor_potencia_fv
+      name: Potencia FV · W
+      min: 0
+      max: 110000
+      needle: true
+    - type: gauge
+      entity: sensor.growsnif_inversor_limite_antivertido
+      name: Límite antivertido · %
+      min: 0
+      max: 100
+      needle: true
+  - type: entities
+    title: Estado
+    show_header_toggle: false
+    entities:
+    - sensor.growsnif_inversor_estado
+    - sensor.growsnif_inversor_limitacion
+    - sensor.growsnif_inversor_potencia_porcentaje
+    - sensor.growsnif_inversor_limite_antivertido
+    - sensor.growsnif_inversor_strings_desconectados
+  - type: history-graph
+    title: Producción · últimas 6 horas
+    hours_to_show: 6
+    entities:
+    - sensor.growsnif_inversor_potencia_ac
+  - type: entities
+    title: Energía
+    show_header_toggle: false
+    entities:
+    - sensor.growsnif_inversor_energia_hoy
+    - sensor.growsnif_inversor_energia_total
+    - sensor.growsnif_inversor_energia_fv_total
+  - type: statistics-graph
+    title: Producción por hora
+    entities:
+    - sensor.growsnif_inversor_energia_total
+    period: hour
+    days_to_show: 2
+    stat_types:
+    - change
+    chart_type: bar
+- title: Inversor AC
+  path: inversor-ac
+  icon: mdi:sine-wave
+  type: masonry
+  cards:
+  - type: entities
+    title: Salida AC
+    show_header_toggle: false
+    entities:
+    - sensor.growsnif_inversor_tension_l1
+    - sensor.growsnif_inversor_tension_l2
+    - sensor.growsnif_inversor_tension_l3
+    - sensor.growsnif_inversor_corriente_l1
+    - sensor.growsnif_inversor_corriente_l2
+    - sensor.growsnif_inversor_corriente_l3
+    - sensor.growsnif_inversor_aparente_total
+    - sensor.growsnif_inversor_reactiva
+    - sensor.growsnif_inversor_factor_potencia
+    - sensor.growsnif_inversor_frecuencia
+  - type: history-graph
+    title: Reactiva · 24 h
+    hours_to_show: 24
+    entities:
+    - sensor.growsnif_inversor_reactiva
+    - sensor.growsnif_inversor_reactiva_maxima
+  - type: entities
+    title: Temperaturas y bus DC
+    show_header_toggle: false
+    entities:
+    - sensor.growsnif_inversor_temperatura_inversor
+    - sensor.growsnif_inversor_temperatura_ipm
+    - sensor.growsnif_inversor_temperatura_boost
+    - sensor.growsnif_inversor_bus_dc_positivo
+    - sensor.growsnif_inversor_bus_dc_negativo
+  - type: entities
+    title: Aislamiento y protecciones
+    show_header_toggle: false
+    entities:
+    - sensor.growsnif_inversor_aislamiento
+    - sensor.growsnif_inversor_fuga_tierra
+    - sensor.growsnif_inversor_dci_r
+    - sensor.growsnif_inversor_dci_s
+    - sensor.growsnif_inversor_dci_t
+    - sensor.growsnif_inversor_ventiladores_averiados
+    - sensor.growsnif_inversor_fallo_codigo
+    - sensor.growsnif_inversor_aviso_codigo
+    - sensor.growsnif_inversor_horas_funcionamiento
+- title: Paneles
+  path: paneles
+  icon: mdi:solar-panel
+  type: masonry
+  cards:
+  - type: history-graph
+    title: Potencia por MPPT · hoy
+    hours_to_show: 12
+    entities:
+    - sensor.growsnif_inversor_mppt1_potencia
+    - sensor.growsnif_inversor_mppt2_potencia
+  - type: entities
+    title: MPPT1
+    show_header_toggle: false
+    entities:
+    - sensor.growsnif_inversor_mppt1_tension
+    - sensor.growsnif_inversor_mppt1_corriente
+    - sensor.growsnif_inversor_mppt1_potencia
+    - sensor.growsnif_inversor_mppt1_energia_hoy
+    - sensor.growsnif_inversor_mppt1_energia_total
+  - type: entities
+    title: MPPT2
+    show_header_toggle: false
+    entities:
+    - sensor.growsnif_inversor_mppt2_tension
+    - sensor.growsnif_inversor_mppt2_corriente
+    - sensor.growsnif_inversor_mppt2_potencia
+    - sensor.growsnif_inversor_mppt2_energia_hoy
+    - sensor.growsnif_inversor_mppt2_energia_total
+  - type: entities
+    title: Strings
+    show_header_toggle: false
+    entities:
+    - sensor.growsnif_inversor_strings_desconectados
+    - sensor.growsnif_inversor_strings_descompensados
+    - sensor.growsnif_inversor_strings_desequilibrados
+    - sensor.growsnif_inversor_string1_corriente
+    - sensor.growsnif_inversor_string2_corriente
+    - sensor.growsnif_inversor_string3_corriente
+    - sensor.growsnif_inversor_string4_corriente

@@ -44,3 +44,27 @@ configuration:
   log_level:
     name: Nivel de log
     description: info recomendado.
+  inverter_enabled:
+    name: Inversor - activar
+    description: Escucha también el bus datalogger ↔ inversor Growatt por un segundo canal de la pasarela. Desactivado no cambia nada.
+  inverter_host:
+    name: Inversor - host de la pasarela
+    description: Vacío = el mismo que gateway_host (pasarela de varios canales).
+  inverter_port:
+    name: Inversor - puerto del canal
+    description: Puerto TCP del canal conectado al bus del inversor. Distinto del del medidor.
+  inverter_address:
+    name: Inversor - dirección Modbus
+    description: Dirección del inversor en su bus (la ves en la pantalla o en la web del datalogger). Suele ser 1.
+  inverter_mppts:
+    name: Inversor - número de MPPT
+    description: Entradas MPPT que quieres ver (1-16). Mira la hoja de datos del inversor.
+  inverter_strings:
+    name: Inversor - número de strings
+    description: Strings a vigilar (0-32). 0 = sin sensores por string ni avisos de string desconectado.
+  inverter_id_prefix:
+    name: Inversor - prefijo de entidades
+    description: Forma los entity_id (sensor.<prefijo>_...). Distinto de id_prefix.
+  inverter_device_name:
+    name: Inversor - nombre del dispositivo
+    description: Nombre que verás en Home Assistant.
