@@ -6,10 +6,12 @@
  *   meter_prefix: growsnif              # prefijo del medidor en GrowSnif
  *   inverter_prefix: growsnif_inversor  # prefijo del inversor en GrowSnif
  *
+ * Incluye también custom:growsnif-ahorro y custom:growsnif-impacto.
+ *
  * Las entidades se encuentran por su unique_id de GrowSnif, así que siguen
  * funcionando aunque las hayas renombrado. Opciones completas en cards/README.md.
  */
-const GSP_VERSION = '1.0.0';
+const GSP_VERSION = '1.1.0';
 const FONT_HREF = 'https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600&family=Barlow:wght@400;500;600&display=swap';
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -867,6 +869,442 @@ class GrowSnifPanel extends HTMLElement {
     const left = clamp(x / 1000 * r.width + 12, 0, r.width - 150);
     tip.style.left = left + 'px'; tip.style.top = '20px';
   }
+}
+
+// ==================================================================== shared base
+
+const EXTRA_CSS = `
+.chartwrap{overflow-x:auto}.chartwrap svg{min-width:620px}
+.s8{grid-column:span 8}.s4{grid-column:span 4}
+@media (max-width:1180px){.s8,.s4{grid-column:span 12}}
+.lead{font-size:17px;color:var(--dim);margin:0}
+.huge{font-family:"Barlow Condensed",sans-serif;font-weight:600;font-size:112px;line-height:.95;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.huge small{font-size:44px;font-weight:500;margin-left:6px}
+.story{font-size:17px;line-height:1.45;max-width:62ch;margin:10px 0 0;color:var(--txt)}
+.story em{font-style:normal;color:var(--dim)}
+.cmp{display:grid;gap:14px;align-content:center}
+.cmp div span{display:flex;justify-content:space-between;font-size:15px;color:var(--dim);margin-bottom:5px}
+.cmp div span b{color:var(--txt);font-weight:500;font-family:"Barlow Condensed",sans-serif;font-size:22px}
+.cmp .track{height:22px;border-radius:3px;background:var(--panel2);overflow:hidden}
+.cmp .track i{display:block;height:100%;transition:width 1s ease}
+.split{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:32px;align-items:center}
+.live{text-align:right}
+.live .now{font-family:"Barlow Condensed",sans-serif;font-weight:600;font-size:40px;line-height:1;font-variant-numeric:tabular-nums}
+.live span{display:block;color:var(--dim);font-size:13.5px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.tile{background:var(--panel2);border:1px solid var(--rule);border-radius:5px;padding:12px 14px}
+.tile span{display:block;color:var(--dim);font-size:13.5px}
+.tile b{font-family:"Barlow Condensed",sans-serif;font-size:32px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.tile b small{font-size:16px;font-weight:500;color:var(--dim);margin-left:4px}
+.tile em{display:block;font-style:normal;color:var(--dim);font-size:13px;margin-top:2px}
+.prow{display:grid;grid-template-columns:42px minmax(0,1fr) 84px;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--rule);font-size:14px}
+.prow .chip{font-family:"Barlow Condensed",sans-serif;font-weight:600;color:var(--ink);text-align:center;border-radius:4px;padding:1px 0}
+.prow b{font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:500;text-align:right}
+.prow small{color:var(--dim)}
+.note{color:var(--dim);font-size:13.5px;max-width:90ch;margin:14px 0 0;line-height:1.45}
+.forest .tree{transform-box:fill-box;transform-origin:50% 100%;animation:grow .7s cubic-bezier(.2,.8,.3,1.2) both}
+@keyframes grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@media (prefers-reduced-motion:reduce){.forest .tree{animation:none}.cmp .track i{transition:none}}
+@media (max-width:720px){.split{grid-template-columns:1fr}.live{text-align:left}.huge{font-size:72px}.huge small{font-size:30px}}
+`;
+
+class GSBase extends HTMLElement {
+  _defaults() { return {}; }
+
+  setConfig(config) {
+    if (!config || (!config.meter_prefix && !config.inverter_prefix)) throw new Error('Pon al menos meter_prefix o inverter_prefix');
+    this._config = Object.assign({ entities: {} }, this._defaults(), config);
+    this._built = false;
+    if (this._hass) this._build();
+  }
+
+  set hass(h) {
+    this._hass = h;
+    if (!this._config) return;
+    if (!this._built) this._build();
+    if (!this._regTried) { this._regTried = true; this._loadRegistry(); }
+    const now = performance.now();
+    if (!this._last || now - this._last > 1500) { this._last = now; this._update(); }
+  }
+
+  getCardSize() { return 30; }
+  getGridOptions() { return { columns: 'full', rows: 'auto' }; }
+
+  connectedCallback() {
+    if (!document.querySelector('link[data-gsp-font]')) {
+      const l = document.createElement('link');
+      l.rel = 'stylesheet'; l.href = FONT_HREF; l.dataset.gspFont = '1';
+      document.head.appendChild(l);
+    }
+    this._timer = setInterval(() => this._refresh(), 10 * 60 * 1000);
+    if (this._built && this._uid !== undefined) this._refresh();
+  }
+
+  disconnectedCallback() { clearInterval(this._timer); }
+
+  async _loadRegistry() {
+    try {
+      const list = await this._hass.callWS({ type: 'config/entity_registry/list' });
+      const map = {};
+      for (const e of list) if (e.platform === 'mqtt' && e.unique_id) map[e.unique_id] = e.entity_id;
+      this._uid = map;
+    } catch (e) { this._uid = {}; }
+    this._update();
+    this._refresh();
+  }
+
+  _id(dev, key) {
+    const c = this._config, ov = c.entities[(dev === 'm' ? 'meter.' : 'inverter.') + key];
+    if (ov) return ov;
+    const p = dev === 'm' ? c.meter_prefix : c.inverter_prefix;
+    if (!p) return null;
+    return (this._uid && this._uid[p + '_' + key]) || `sensor.${p}_${key}`;
+  }
+
+  _st(eid) { return eid && this._hass ? this._hass.states[eid] : undefined; }
+  _val(eid) { const s = this._st(eid); if (!s) return null; const v = parseFloat(s.state); return isFinite(v) ? v : null; }
+  _num(dev, key) { return this._val(this._id(dev, key)); }
+  _set(id, text) { const e = this._els && this._els[id]; if (e && e.textContent !== text) e.textContent = text; }
+  _html(id, html) { const e = this._els && this._els[id]; if (e && e.innerHTML !== html) e.innerHTML = html; }
+
+  _mount(html) {
+    if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
+    this.shadowRoot.innerHTML = `<style>${CSS}${EXTRA_CSS}</style>${html}`;
+    this._els = {};
+    this.shadowRoot.querySelectorAll('[data-id]').forEach((e) => { this._els[e.dataset.id] = e; });
+  }
+
+  async _stats(ids, start, period, types) {
+    ids = ids.filter((id) => id && this._st(id));
+    if (!ids.length) return {};
+    try {
+      return await this._hass.callWS({ type: 'recorder/statistics_during_period', start_time: start.toISOString(),
+        end_time: new Date().toISOString(), statistic_ids: ids, period, types }) || {};
+    } catch (e) { return {}; }
+  }
+
+  static ts(p) { return typeof p.start === 'number' ? p.start : Date.parse(p.start); }
+
+  _livePower() {
+    const pGrid = this._num('m', 'potencia_total');
+    let pSol = this._num('i', 'potencia_ac');
+    if (pSol == null) pSol = 0;
+    const pLoad = pGrid != null ? pGrid + pSol : null;
+    return { pGrid, pSol, pLoad, self: pLoad == null ? null : Math.max(0, Math.min(pSol, pLoad)) };
+  }
+}
+
+const monthKey = (d) => d.getFullYear() * 12 + d.getMonth();
+const monthName = (k, len = 'short') => new Date(Math.floor(k / 12), k % 12, 1).toLocaleDateString('es-ES', { month: len });
+const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+const startOfWeek = (d) => { const x = startOfDay(d); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
+const eur = (v, d) => v == null ? '—' : nf(v, d == null ? (Math.abs(v) >= 1000 ? 0 : Math.abs(v) >= 100 ? 0 : 2) : d);
+
+function barChart(groups, opts) {
+  // groups: [{label, parts:[{v, color, title}], top}] -> SVG
+  const W = opts.width || 800, H = 260, padB = 28, padT = 26, n = Math.max(1, groups.length);
+  const max = Math.max(1, ...groups.map((g) => g.parts.reduce((a, p) => a + (p.v || 0), 0)));
+  const bw = Math.min(54, (W / n) * 0.62), gap = W / n;
+  let out = '';
+  groups.forEach((g, i) => {
+    const cx = gap * i + gap / 2;
+    let y = H - padB;
+    g.parts.forEach((p) => {
+      const h = (p.v || 0) / max * (H - padB - padT);
+      if (h > 0) out += `<rect x="${(cx - bw / 2).toFixed(1)}" y="${(y - h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${p.color}"><title>${esc(p.title || '')}</title></rect>`;
+      y -= h;
+    });
+    if (g.top) out += `<text x="${cx.toFixed(1)}" y="${(y - 8).toFixed(1)}" text-anchor="middle" style="fill:${opts.topColor || 'var(--txt)'};font-size:15px;font-weight:600">${esc(g.top)}</text>`;
+    out += `<text x="${cx.toFixed(1)}" y="${H - 8}" text-anchor="middle" class="lbl">${esc(g.label)}</text>`;
+  });
+  return `<div class="chartwrap"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.label)}"><line x1="0" x2="${W}" y1="${H - padB}" y2="${H - padB}" stroke="var(--rule2)"></line>${out}</svg></div>`;
+}
+
+// ==================================================================== ahorro
+
+class GrowSnifAhorro extends GSBase {
+  _defaults() {
+    return { title: 'Ahorro solar', subtitle: 'Lo que la instalación solar te evita pagar a la compañía', price_entities: [],
+      price_kwh: null, price_now_entity: null, cost_entity: null, tax_factor: 1, months: 12 };
+  }
+
+  _price(p) {
+    const c = this._config, eid = (c.price_entities || [])[p - 1];
+    let v = eid ? this._val(eid) : null;
+    if (v != null && v > 5) v /= 1000;           // €/MWh -> €/kWh
+    if (v == null && c.price_kwh != null) v = +c.price_kwh;
+    return v;
+  }
+
+  _build() {
+    this._built = true;
+    const c = this._config;
+    this._mount(`<div class="root">
+ <header>
+  <div><h1>${esc(c.title)}</h1><div class="sub">${esc(c.subtitle)}</div></div><div></div>
+  <div class="live"><span>Ahorrando ahora mismo</span><div class="now" data-id="nowe" style="color:var(--sol)">—</div>
+   <span data-id="nowp"></span></div>
+ </header>
+ <div class="grid">
+  <section class="panel hero s12" style="padding:24px 28px"><div class="split">
+   <div><p class="lead" data-id="hlead">Este mes la instalación solar te ha ahorrado</p>
+    <div class="huge" data-id="hval" style="color:var(--sol)">—</div>
+    <p class="story" data-id="hstory">Calculando con las estadísticas de Home Assistant…</p></div>
+   <div class="cmp">
+    <div><span>Sin paneles habrías pagado<b data-id="cwo">—</b></span><div class="track"><i data-id="two" style="width:0;background:var(--imp)"></i></div></div>
+    <div><span>Has pagado<b data-id="cw">—</b></span><div class="track"><i data-id="tw" style="width:0;background:var(--imp);opacity:.55"></i></div></div>
+    <div><span>Ahorro<b data-id="cs" style="color:var(--sol)">—</b></span><div class="track"><i data-id="ts" style="width:0;background:var(--sol)"></i></div></div>
+   </div></div></section>
+  <section class="panel s8"><h2>Ahorro por mes</h2><p class="hint" data-id="mhint">Lo pagado y lo que la solar te ha evitado pagar</p>
+   <div data-id="mchart"></div>
+   <div class="legend" style="margin-top:6px"><span><i style="background:var(--imp);opacity:.55"></i>Pagado en energía</span><span><i style="background:var(--sol)"></i>Ahorrado con la solar</span></div></section>
+  <section class="panel s4"><h2>Este mes por periodo</h2><p class="hint">Energía solar consumida en cada periodo tarifario y lo que vale</p>
+   <div data-id="periods"></div></section>
+  <section class="panel s12"><h2>Resumen</h2><p class="hint">Ahorro y energía solar consumida en el propio edificio</p>
+   <div class="tiles" data-id="tiles"></div>
+   <p class="note" data-id="method"></p></section>
+ </div>
+ <footer><span data-id="fresh">Esperando estadísticas…</span><span>GrowSnif · tarjeta ${GSP_VERSION}</span></footer>
+</div>`);
+  }
+
+  _update() {
+    if (!this._els) return;
+    const { self } = this._livePower(), now = new Date(), p = period61(now);
+    const priceNow = this._val(this._config.price_now_entity) ?? this._price(p);
+    const pr = priceNow != null && priceNow > 5 ? priceNow / 1000 : priceNow;
+    const eh = self != null && pr != null ? self / 1000 * pr * this._config.tax_factor : null;
+    this._set('nowe', eh == null ? '—' : `${nf(eh, 2)} €/h`);
+    this._set('nowp', `Periodo P${p}${pr != null ? `, ${nf(pr, 4)} €/kWh` : ''}${self != null ? `, ${kw(self)} kW solares consumidos` : ''}`);
+  }
+
+  async _refresh() {
+    if (!this._hass || !this._els || this._uid === undefined) return;
+    const c = this._config, now = new Date();
+    const months = clamp(+c.months || 12, 1, 24);
+    const start = new Date(now.getFullYear(), now.getMonth() - months + 1, 1);
+    const solId = this._id('i', 'energia_total'), expId = this._id('m', 'energia_exportada');
+    const [hourly, costs] = await Promise.all([
+      this._stats([solId, expId], start, 'hour', ['change']),
+      c.cost_entity ? this._stats([c.cost_entity], start, 'month', ['change']) : Promise.resolve({})]);
+    const exp = new Map((hourly[expId] || []).map((x) => [GSBase.ts(x), x.change || 0]));
+    const mk0 = monthKey(start), mkNow = monthKey(now), t0 = startOfDay(now).getTime(), tw = startOfWeek(now).getTime();
+    const M = {}, P = {}, sum = { day: [0, 0], week: [0, 0], month: [0, 0], all: [0, 0] };
+    let missing = false, hours = 0;
+    for (const x of hourly[solId] || []) {
+      const t = GSBase.ts(x), d = new Date(t);
+      const selfKwh = Math.max(0, (x.change || 0) - Math.max(0, exp.get(t) || 0));
+      if (!selfKwh) continue;
+      hours++;
+      const per = period61(d), price = this._price(per);
+      if (price == null) missing = true;
+      const saved = price == null ? 0 : selfKwh * price * c.tax_factor;
+      const k = monthKey(d);
+      M[k] = M[k] || { saved: 0, kwh: 0 }; M[k].saved += saved; M[k].kwh += selfKwh;
+      if (k === mkNow) { P[per] = P[per] || { saved: 0, kwh: 0 }; P[per].saved += saved; P[per].kwh += selfKwh; sum.month[0] += saved; sum.month[1] += selfKwh; }
+      if (t >= t0) { sum.day[0] += saved; sum.day[1] += selfKwh; }
+      if (t >= tw) { sum.week[0] += saved; sum.week[1] += selfKwh; }
+      sum.all[0] += saved; sum.all[1] += selfKwh;
+    }
+    const paid = {};
+    for (const x of costs[c.cost_entity] || []) paid[monthKey(new Date(GSBase.ts(x)))] = x.change;
+
+    // hero: this month
+    const m = M[mkNow] || { saved: 0, kwh: 0 }, pm = paid[mkNow];
+    const mname = monthName(mkNow, 'long');
+    this._set('hlead', `En ${mname} la instalación solar te ha ahorrado`);
+    this._html('hval', `${eur(m.saved, 0)}<small>€</small>`);
+    if (pm != null) {
+      const wo = pm + m.saved;
+      this._els.cwo.parentElement.parentElement.style.display = '';
+      this._els.cw.parentElement.parentElement.style.display = '';
+      this._set('hstory', `Sin paneles habrías pagado ${eur(wo, 0)} € en energía este mes. Has pagado ${eur(pm, 0)} €, un ${nf(wo > 0 ? m.saved / wo * 100 : 0, 0)}\u00a0% menos, gracias a ${nf(m.kwh, 0)} kWh solares consumidos en el propio edificio.`);
+      this._set('cwo', eur(wo, 0) + ' €'); this._set('cw', eur(pm, 0) + ' €'); this._set('cs', eur(m.saved, 0) + ' €');
+      this._els.two.style.width = '100%';
+      this._els.tw.style.width = (wo > 0 ? pm / wo * 100 : 0) + '%';
+      this._els.ts.style.width = (wo > 0 ? m.saved / wo * 100 : 0) + '%';
+    } else {
+      this._set('hstory', `Son ${nf(m.kwh, 0)} kWh solares consumidos en el propio edificio, valorados al precio de cada periodo. Añade cost_entity para compararlo con lo que has pagado.`);
+      this._els.cwo.parentElement.parentElement.style.display = 'none';
+      this._els.cw.parentElement.parentElement.style.display = 'none';
+      this._set('cs', eur(m.saved, 0) + ' €'); this._els.ts.style.width = '100%';
+    }
+
+    // monthly chart
+    const groups = [];
+    for (let k = mk0; k <= mkNow; k++) {
+      const s = M[k] ? M[k].saved : 0, pd = paid[k];
+      if (!s && pd == null && groups.length === 0) continue;   // skip leading months without data
+      groups.push({ label: monthName(k) + (k === mkNow ? '*' : ''), top: s ? eur(s, 0) + ' €' : '',
+        parts: [{ v: pd || 0, color: 'rgba(255,93,108,.55)', title: `Pagado ${eur(pd, 0)} €` },
+          { v: s, color: 'var(--sol)', title: `Ahorrado ${eur(s, 0)} €` }] });
+    }
+    this._html('mchart', groups.length ? barChart(groups, { label: 'Ahorro por mes', topColor: 'var(--sol)' })
+      : '<p class="empty">Aún no hay estadísticas de energía solar.</p>');
+    this._set('mhint', groups.length ? `Lo pagado y lo que la solar te ha evitado pagar. * mes en curso.` : 'Sin datos todavía');
+
+    // periods
+    const pmax = Math.max(1, ...Object.values(P).map((x) => x.saved));
+    let rows = '';
+    for (let n = 1; n <= 6; n++) {
+      const x = P[n] || { saved: 0, kwh: 0 }, price = this._price(n);
+      rows += `<div class="prow"><span class="chip" style="background:${PERIOD_COLORS[n]}">P${n}</span>
+        <span>${nf(x.kwh, 0)} kWh <small>${price != null ? `a ${nf(price, 4)} €/kWh` : 'sin precio'}</small>
+        <div class="bar"><i style="width:${(x.saved / pmax * 100).toFixed(1)}%;background:${PERIOD_COLORS[n]}"></i></div></span>
+        <b>${eur(x.saved, 0)} €</b></div>`;
+    }
+    this._html('periods', rows);
+
+    // tiles
+    const tile = (name, [s, k]) => `<div class="tile"><span>${name}</span><b>${eur(s)}<small>€</small></b>
+      <em>${nf(k, 0)} kWh solares consumidos${k > 0 ? `, ${nf(s / k, 3)} €/kWh de media` : ''}</em></div>`;
+    this._html('tiles', tile('Hoy', sum.day) + tile('Esta semana', sum.week) + tile(`En ${mname}`, sum.month)
+      + tile(groups.length < months ? 'Desde que hay estadísticas' : `Últimos ${months} meses`, sum.all));
+    this._set('method', `Cómo se calcula: cada hora, la energía solar consumida en el edificio (producción menos vertido) por el precio de la energía del periodo de esa hora${c.price_entities && c.price_entities.length ? ', con los precios de tu última factura' : ''}${c.tax_factor !== 1 ? `, multiplicado por ${nf(c.tax_factor, 4)} de impuestos` : ', sin impuestos'}. No incluye el término de potencia ni la reactiva, que la solar no reduce.${missing ? ' Faltan precios de algún periodo: esas horas no suman ahorro.' : ''}`);
+    this._set('fresh', `Estadísticas recalculadas a las ${now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} con ${hours} horas de producción.`);
+  }
+}
+
+// ==================================================================== impacto
+
+class GrowSnifImpacto extends GSBase {
+  _defaults() {
+    return { title: 'Impacto ambiental', subtitle: 'Las emisiones que la instalación solar ha evitado a la red',
+      co2_entity: null, co2_factor: 150, tree_kg: 22, car_g_km: 120, home_kwh: 3500, diesel_kg_l: 2.68 };
+  }
+
+  _build() {
+    this._built = true;
+    const c = this._config;
+    this._scope = this._scope || 'total';
+    this._mount(`<div class="root">
+ <header>
+  <div><h1>${esc(c.title)}</h1><div class="sub">${esc(c.subtitle)}</div></div><div></div>
+  <div class="live"><span>Evitando ahora mismo</span><div class="now" data-id="nowc" style="color:var(--exp)">—</div><span data-id="nowi"></span></div>
+ </header>
+ <div class="grid">
+  <section class="panel hero s12" style="padding:24px 28px">
+   <div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start">
+    <div><p class="lead" data-id="hlead">Desde su puesta en marcha, la instalación ha evitado</p>
+     <div class="huge" data-id="hval" style="color:var(--exp)">—</div>
+     <p class="story" data-id="hstory"></p></div>
+    <div class="tabs" role="group" aria-label="Periodo">${[['total', 'Total'], ['year', 'Este año'], ['month', 'Este mes']].map(([k, n]) =>
+      `<button data-scope="${k}" aria-pressed="${k === this._scope}">${n}</button>`).join('')}</div>
+   </div>
+   <div class="forest" data-id="forest" style="margin-top:12px"></div>
+   <p class="note" data-id="fnote"></p>
+  </section>
+  <section class="panel s12"><h2>Equivale a</h2><p class="hint" data-id="ehint">Comparaciones orientativas con el CO₂ evitado</p><div class="tiles" data-id="eq"></div></section>
+  <section class="panel s12"><h2>CO₂ evitado por mes</h2><p class="hint" data-id="mhint">Este año</p><div data-id="mchart"></div></section>
+ </div>
+ <footer><span data-id="fresh">Esperando estadísticas…</span><span>GrowSnif · tarjeta ${GSP_VERSION}</span></footer>
+</div>`);
+    this.shadowRoot.querySelectorAll('[data-scope]').forEach((b) => b.addEventListener('click', () => {
+      this._scope = b.dataset.scope;
+      this.shadowRoot.querySelectorAll('[data-scope]').forEach((x) => x.setAttribute('aria-pressed', x === b));
+      this._render(true);
+    }));
+  }
+
+  _factor() {
+    const v = this._val(this._config.co2_entity);
+    return v != null && v > 0 ? v : +this._config.co2_factor;
+  }
+
+  _update() {
+    if (!this._els) return;
+    const { pSol } = this._livePower(), f = this._factor();
+    this._set('nowc', pSol ? `${nf(pSol / 1000 * f / 1000, 1)} kg/h` : '0 kg/h');
+    this._set('nowi', `${kw(pSol)} kW solares, red a ${nf(f, 0)} g de CO₂ por kWh${this._config.co2_entity && this._val(this._config.co2_entity) != null ? '' : ' (valor fijo)'}`);
+    const total = this._num('i', 'energia_total');
+    if (total != null && total !== this._lifetime) { this._lifetime = total; if (this._data) this._render(false); }
+  }
+
+  async _refresh() {
+    if (!this._hass || !this._els || this._uid === undefined) return;
+    const c = this._config, now = new Date(), start = new Date(now.getFullYear(), 0, 1);
+    const solId = this._id('i', 'energia_total');
+    const r = await this._stats([solId, c.co2_entity], start, 'hour', ['change', 'mean']);
+    const co2 = new Map((r[c.co2_entity] || []).filter((x) => x.mean != null).map((x) => [GSBase.ts(x), x.mean]));
+    const M = {}, mkNow = monthKey(now);
+    let year = [0, 0], month = [0, 0], measured = 0, hours = 0;
+    for (const x of r[solId] || []) {
+      const kwh = Math.max(0, x.change || 0); if (!kwh) continue;
+      const t = GSBase.ts(x), g = co2.has(t) ? co2.get(t) : +c.co2_factor;
+      if (co2.has(t)) measured++;
+      hours++;
+      const kg = kwh * g / 1000, k = monthKey(new Date(t));
+      M[k] = (M[k] || 0) + kg; year[0] += kg; year[1] += kwh;
+      if (k === mkNow) { month[0] += kg; month[1] += kwh; }
+    }
+    this._data = { M, year, month, measured, hours, avg: year[1] ? year[0] * 1000 / year[1] : +c.co2_factor };
+    this._render(true);
+    // monthly chart
+    const groups = [];
+    for (let k = monthKey(start); k <= mkNow; k++) {
+      if (!M[k] && !groups.length) continue;
+      groups.push({ label: monthName(k) + (k === mkNow ? '*' : ''), top: M[k] ? `${nf(M[k] / 1000, 1)} t` : '',
+        parts: [{ v: M[k] || 0, color: 'var(--exp)', title: `${nf(M[k] || 0, 0)} kg` }] });
+    }
+    this._html('mchart', groups.length ? barChart(groups, { label: 'CO₂ evitado por mes', topColor: 'var(--exp)', width: 1100 })
+      : '<p class="empty">Aún no hay estadísticas de producción solar este año.</p>');
+    this._set('mhint', `Este año, en toneladas. * mes en curso.${measured ? ` ${nf(measured / Math.max(1, hours) * 100, 0)} % de las horas con la intensidad real de la red.` : ''}`);
+    this._set('fresh', `Estadísticas recalculadas a las ${now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}.`);
+  }
+
+  _render(animate) {
+    const d = this._data, c = this._config;
+    if (!d) return;
+    const life = this._lifetime ?? this._num('i', 'energia_total');
+    const scope = this._scope;
+    let kg, kwh, lead, est;
+    if (scope === 'year') { [kg, kwh] = d.year; lead = `En ${new Date().getFullYear()} la instalación ha evitado`; }
+    else if (scope === 'month') { [kg, kwh] = d.month; lead = `En ${monthName(monthKey(new Date()), 'long')} la instalación ha evitado`; }
+    else {
+      kwh = life; kg = life != null ? life * d.avg / 1000 : null;
+      lead = 'Desde su puesta en marcha, la instalación ha evitado'; est = true;
+    }
+    this._set('hlead', lead);
+    this._html('hval', kg == null ? '—' : kg >= 1000 ? `${nf(kg / 1000, 1)}<small>t de CO₂</small>` : `${nf(kg, 0)}<small>kg de CO₂</small>`);
+    const trees = kg == null ? 0 : kg / c.tree_kg;
+    this._set('hstory', kg == null ? '' : `Con ${nf(kwh, 0)} kWh de energía solar que la red no ha tenido que generar. Es el CO₂ que absorben ${nf(trees, 0)} árboles durante un año.`);
+    // forest
+    const units = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000];
+    const unit = units.find((u) => trees / u <= 96) || 10000;
+    const count = Math.round(trees / unit);
+    const cols = 24, cw = 36, rh = 46, rows = Math.max(1, Math.ceil(count / cols));
+    let g = '';
+    for (let i = 0; i < count; i++) {
+      const col = i % cols, row = Math.floor(i / cols);
+      const rnd = Math.abs(Math.sin(i * 12.9898) * 43758.5453) % 1;
+      const s = 0.82 + rnd * 0.3, x = col * cw + cw / 2 + (rnd - 0.5) * 6, y = row * rh + rh;
+      const col1 = rnd > 0.5 ? '#4ef0b0' : '#2fc98f', delay = animate ? (i * 9) : 0;
+      const shape = rnd > 0.38
+        ? `<path d="M0,0 L-11,-14 L-5,-14 L-13,-26 L-6,-26 L0,-38 L6,-26 L13,-26 L5,-14 L11,-14 Z" fill="${col1}"></path>`
+        : `<circle cx="0" cy="-22" r="12" fill="${col1}"></circle>`;
+      g += `<g transform="translate(${x.toFixed(1)},${y}) scale(${s.toFixed(2)})"><g class="tree" style="animation-delay:${delay}ms${animate ? '' : ';animation:none'}">
+        <rect x="-1.5" y="-8" width="3" height="8" fill="#7d93ab"></rect>${shape}</g></g>`;
+    }
+    this._html('forest', count ? `<svg viewBox="0 0 ${cols * cw} ${rows * rh + 6}" role="img" aria-label="${nf(trees, 0)} árboles"><line x1="0" x2="${cols * cw}" y1="${rows * rh + 1}" y2="${rows * rh + 1}" stroke="var(--rule2)"></line>${g}</svg>`
+      : '<p class="empty">Todavía no hay producción en este periodo.</p>');
+    this._set('fnote', count ? `Cada árbol del dibujo representa ${unit === 1 ? 'un árbol' : nf(unit, 0) + ' árboles'}, a ${c.tree_kg} kg de CO₂ absorbidos por árbol y año.${est ? ` El total usa ${nf(d.avg, 0)} g de CO₂ por kWh de la red${d.measured ? ', la media real de este año' : ', un valor fijo'}.` : ''}` : '');
+    // equivalences
+    const tile = (t, v, u, sub) => `<div class="tile"><span>${t}</span><b>${v}<small>${u}</small></b><em>${sub}</em></div>`;
+    const km = kg == null ? null : kg * 1000 / c.car_g_km;
+    this._html('eq', kg == null ? '' :
+      tile('Kilómetros en coche', nf(km, 0), 'km', `${nf(km / 40075, 1)} vueltas a la Tierra, a ${c.car_g_km} g/km`)
+      + tile('Gasóleo sin quemar', nf(kg / c.diesel_kg_l, 0), 'litros', `a ${nf(c.diesel_kg_l, 2)} kg de CO₂ por litro`)
+      + tile('Consumo de hogares', nf(kwh / c.home_kwh, 0), 'hogares', `durante un año, a ${nf(c.home_kwh, 0)} kWh por hogar`)
+      + tile('Árboles', nf(trees, 0), 'árboles', `absorbiendo CO₂ durante un año, a ${c.tree_kg} kg cada uno`));
+  }
+}
+
+for (const [tag, cls, name, desc] of [
+  ['growsnif-ahorro', GrowSnifAhorro, 'GrowSnif · Ahorro solar', 'Ahorro hora a hora con los precios de cada periodo 6.1TD.'],
+  ['growsnif-impacto', GrowSnifImpacto, 'GrowSnif · Impacto ambiental', 'CO₂ evitado, árboles y equivalencias.']]) {
+  if (!customElements.get(tag)) customElements.define(tag, cls);
+  window.customCards = window.customCards || [];
+  if (!window.customCards.some((c) => c.type === tag)) window.customCards.push({ type: tag, name, description: desc, preview: false });
 }
 
 if (!customElements.get('growsnif-panel')) customElements.define('growsnif-panel', GrowSnifPanel);
