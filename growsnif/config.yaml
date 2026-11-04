@@ -1,7 +1,7 @@
 name: GrowSnif
-version: 1.3.0
+version: 1.4.0
 slug: growsnif
-description: Escucha pasiva del medidor CHINT DTSU666 y del inversor Growatt en sus buses RS485 y los publica en Home Assistant por MQTT. Nunca escribe en el bus.
+description: Escucha pasiva del medidor CHINT DTSU666 y del inversor Growatt en sus buses RS485 y los publica en Home Assistant por MQTT. Nunca escribe en el bus. Creado por manu8613.
 url: https://github.com/manu8613/GrowSnif
 arch:
   - amd64
@@ -11,6 +11,11 @@ boot: auto
 init: false
 services:
   - mqtt:need
+# Solo para instalar el panel (panel_install). Desactivado, no se usan.
+homeassistant_api: true
+map:
+  - type: homeassistant_config
+    read_only: false
 options:
   gateway_host: ""
   gateway_port: 4196
@@ -35,6 +40,32 @@ options:
   inverter_strings: 0
   inverter_id_prefix: growsnif_inversor
   inverter_device_name: GrowSnif inversor
+  panel_install: false
+  panel_mode: una_vez
+  panel_url: growsnif-control
+  panel_title: Centro de control energético
+  panel_subtitle: ""
+  panel_sidebar_title: Energía
+  panel_icon: mdi:transmission-tower
+  panel_nominal_power: 10000
+  panel_strings_per_mppt: 0
+  panel_zero_export: true
+  panel_lines: []
+  panel_savings: true
+  panel_impact: true
+  panel_price_entities: []
+  panel_price_kwh: 0
+  panel_price_now_entity: ""
+  panel_cost_entity: ""
+  panel_tax_factor: 1
+  panel_co2_entity: ""
+  panel_co2_factor: 150
+  panel_pf_min: 0.95
+  panel_voltage_min: 207
+  panel_voltage_max: 253
+  panel_unbalance_max: 25
+  panel_temp_warn: 65
+  panel_export_alarm: 1000
 schema:
   gateway_host: str
   gateway_port: port
@@ -59,3 +90,36 @@ schema:
   inverter_strings: int(0,32)
   inverter_id_prefix: match(^[a-z0-9_]{1,40}$)
   inverter_device_name: str
+  panel_install: bool
+  panel_mode: list(una_vez|gestionado)
+  panel_url: match(^[a-z0-9]+(-[a-z0-9]+)+$)
+  panel_title: str
+  panel_subtitle: str?
+  panel_sidebar_title: str
+  panel_icon: str
+  panel_nominal_power: int(100,10000000)
+  panel_strings_per_mppt: int(0,8)
+  panel_zero_export: bool
+  panel_lines:
+    - name: str
+      power: str
+      code: str?
+      energy: str?
+      current: str?
+      max: int?
+  panel_savings: bool
+  panel_impact: bool
+  panel_price_entities:
+    - str
+  panel_price_kwh: float(0,10)
+  panel_price_now_entity: str?
+  panel_cost_entity: str?
+  panel_tax_factor: float(0.5,3)
+  panel_co2_entity: str?
+  panel_co2_factor: int(0,2000)
+  panel_pf_min: float(0.5,1)
+  panel_voltage_min: int(100,400)
+  panel_voltage_max: int(100,500)
+  panel_unbalance_max: int(1,100)
+  panel_temp_warn: int(20,120)
+  panel_export_alarm: int(0,10000000)

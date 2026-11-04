@@ -19,7 +19,7 @@ import paho.mqtt.client as mqtt
 
 from protocol import DERIVED, REGS, Decoder, apparent_power, convert
 
-VERSION = '1.3.0'
+VERSION = '1.4.0'
 SUPERVISOR_MQTT = 'http://supervisor/services/mqtt'
 FAST = ('potencia_total', 'potencia_importada', 'potencia_exportada')
 FAST_EXPIRE, SLOW_EXPIRE = 10, 180
@@ -35,6 +35,17 @@ DEFAULTS = {
     'inverter_mppts': 2, 'inverter_strings': 0, 'inverter_id_prefix': 'growsnif_inversor',
     'inverter_device_name': 'GrowSnif inversor',
 }
+# Control panel installer (optional, off by default)
+DEFAULTS.update({
+    'panel_install': False, 'panel_mode': 'una_vez', 'panel_url': 'growsnif-control',
+    'panel_title': 'Centro de control energético', 'panel_subtitle': '', 'panel_sidebar_title': 'Energía',
+    'panel_icon': 'mdi:transmission-tower', 'panel_nominal_power': 10000, 'panel_strings_per_mppt': 0,
+    'panel_zero_export': True, 'panel_lines': [], 'panel_savings': True, 'panel_impact': True,
+    'panel_price_entities': [], 'panel_price_kwh': 0.0, 'panel_price_now_entity': '', 'panel_cost_entity': '',
+    'panel_tax_factor': 1.0, 'panel_co2_entity': '', 'panel_co2_factor': 150,
+    'panel_pf_min': 0.95, 'panel_voltage_min': 207, 'panel_voltage_max': 253, 'panel_unbalance_max': 25,
+    'panel_temp_warn': 65, 'panel_export_alarm': 1000,
+})
 
 
 def load_options(path=None):
@@ -68,6 +79,19 @@ def load_options(path=None):
         if (inv_host, int(opts['inverter_port'])) == (str(opts['gateway_host']).strip(), int(opts['gateway_port'])):
             errors.append('el inversor necesita su propio canal: inverter_host/inverter_port no pueden ser '
                           'los mismos que gateway_host/gateway_port')
+    if opts['panel_install']:
+        if not re.fullmatch(r'[a-z0-9]+(-[a-z0-9]+)+', str(opts['panel_url'])):
+            errors.append('panel_url: minúsculas y números con al menos un guion, p. ej. growsnif-control')
+        if opts['panel_mode'] not in ('una_vez', 'gestionado'):
+            errors.append('panel_mode: una_vez o gestionado')
+        lines = opts['panel_lines'] or []
+        if not isinstance(lines, list) or any(not isinstance(x, dict) or not str(x.get('power') or '').strip() for x in lines):
+            errors.append('panel_lines: cada línea necesita al menos name y power (entidad de potencia)')
+        prices = opts['panel_price_entities'] or []
+        if prices and len(prices) != 6:
+            errors.append('panel_price_entities: pon las 6 entidades de precio, de P1 a P6, o ninguna')
+        if not float(opts['panel_voltage_min']) < float(opts['panel_voltage_max']):
+            errors.append('panel_voltage_min debe ser menor que panel_voltage_max')
     if errors:
         raise ValueError('; '.join(errors))
     return opts
@@ -147,6 +171,9 @@ def main():
     prefix, disc = opts['id_prefix'], opts['discovery_prefix']
     interval = float(opts['publish_interval'])
     host, port, user, password = resolve_mqtt(opts)
+    if opts['panel_install']:
+        import panel  # only needed when the panel installer is on
+        panel.start(opts, VERSION, STOP)
     inverter_thread = None
     if opts['inverter_enabled']:
         import inverter  # only needed when the inverter channel is on

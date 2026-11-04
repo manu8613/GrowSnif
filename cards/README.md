@@ -1,5 +1,10 @@
 # GrowSnif · Centro de control
 
+Creado por [manu8613](https://github.com/manu8613/GrowSnif).
+
+> Con el complemento GrowSnif no hace falta nada de esto: activa `panel_install` y lo
+> instala y actualiza solo. Esta guía es para usar la tarjeta sin el complemento.
+
 Tarjeta de Home Assistant para ver toda la instalación en una sola pantalla:
 
 - **Esquema unifilar** en directo: red, medidor, inversor, embarrado general y una salida
@@ -26,10 +31,10 @@ pestañas aparte:
 
 ## Instalación
 
-1. Copia `growsnif-panel.js` a la carpeta `www` de tu configuración (por Samba:
+1. Copia [`growsnif/www/growsnif-panel.js`](../growsnif/www/growsnif-panel.js) a la carpeta `www` de tu configuración (por Samba:
    `config/www/`). Créala si no existe.
 2. **Ajustes → Paneles → ⋮ → Recursos → Añadir recurso**:
-   URL `/local/growsnif-panel.js?v=1.1.0`, tipo **Módulo JavaScript**.
+   URL `/local/growsnif-panel.js?v=1.2.0`, tipo **Módulo JavaScript**.
 3. **Ajustes → Paneles → Añadir panel → Nuevo panel desde cero**. Ábrelo,
    **⋮ → Editar → ⋮ → Editor de configuración en bruto** y pega:
 
@@ -65,6 +70,8 @@ la versión en caché.
 | `co2_factor` | 150 | g de CO₂ por kWh de la red, para el CO₂ evitado |
 | `co2_entity` | — | Sensor de intensidad de CO₂ (g/kWh); sustituye a `co2_factor` |
 | `lines` | [] | Líneas medidas: `name`, `code`, `power` (W o kW) y `max` opcional |
+| `strings_per_mppt` | 0 | Strings por MPPT; 0 los reparte solo |
+| `thresholds` | — | Umbrales: `pf_min`, `v_min`, `v_max`, `f_min`, `f_max`, `unbalance_max`, `export_max`, `temp_warn`, `temp_crit`, `ipm_warn`, `ipm_crit`, `iso_min`, `leak_max`, `eff_min`, `string_low` |
 | `entities` | {} | Sustituir una entidad: `meter.potencia_total: sensor.otra` o `inverter.potencia_ac: sensor.otra` |
 
 Las entidades se buscan por el `unique_id` de GrowSnif, así que la tarjeta las encuentra

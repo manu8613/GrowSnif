@@ -68,3 +68,81 @@ configuration:
   inverter_device_name:
     name: Inverter - device name
     description: Name shown in Home Assistant.
+  panel_install:
+    name: Panel - install
+    description: Creates the control panel dashboard (Control, Savings, Impact) and keeps the card updated. Needs the config and API permissions, used only when this is on.
+  panel_mode:
+    name: Panel - mode
+    description: 'una_vez: created once, your later changes are kept. gestionado: these options rule and the dashboard is rewritten when they change, after a backup in /config/growsnif/backups.'
+  panel_url:
+    name: Panel - URL path
+    description: Dashboard path with at least one dash (e.g. growsnif-control).
+  panel_title:
+    name: Panel - title
+    description: Header title.
+  panel_subtitle:
+    name: Panel - subtitle
+    description: Text under the title (optional).
+  panel_sidebar_title:
+    name: Panel - sidebar name
+    description: Dashboard name in the Home Assistant menu.
+  panel_icon:
+    name: Panel - icon
+    description: mdi icon for the menu (e.g. mdi:transmission-tower).
+  panel_nominal_power:
+    name: Panel - nominal power (W)
+    description: Inverter nominal power in watts.
+  panel_strings_per_mppt:
+    name: Panel - strings per MPPT
+    description: 0 = automatic split between MPPTs.
+  panel_zero_export:
+    name: Panel - zero export
+    description: Warns when power is exported to the grid.
+  panel_lines:
+    name: Panel - metered lines
+    description: 'One per line: name, power (power entity) and optionally code, energy, current and max (W).'
+  panel_savings:
+    name: Panel - Savings tab
+    description: Hour by hour savings with the price of each tariff period.
+  panel_impact:
+    name: Panel - Impact tab
+    description: Avoided CO₂ and equivalences.
+  panel_price_entities:
+    name: Panel - prices P1 to P6
+    description: Six entities with the energy price of each period (€/kWh), in order.
+  panel_price_kwh:
+    name: Panel - single price (€/kWh)
+    description: If you do not have six prices. 0 = no price.
+  panel_price_now_entity:
+    name: Panel - current price
+    description: Entity with the current energy price (optional).
+  panel_cost_entity:
+    name: Panel - accumulated cost
+    description: Accumulated energy cost entity, to compare with what you paid (optional).
+  panel_tax_factor:
+    name: Panel - tax factor
+    description: Multiplies savings. 1 = no taxes.
+  panel_co2_entity:
+    name: Panel - CO₂ intensity
+    description: Entity in g/kWh (e.g. Electricity Maps), optional.
+  panel_co2_factor:
+    name: Panel - CO₂ per kWh (g)
+    description: Fixed value when there is no CO₂ entity.
+  panel_pf_min:
+    name: Alarm - minimum power factor
+    description: Below it, reactive penalty warning.
+  panel_voltage_min:
+    name: Alarm - minimum voltage (V)
+    description: Minimum phase voltage.
+  panel_voltage_max:
+    name: Alarm - maximum voltage (V)
+    description: Maximum phase voltage.
+  panel_unbalance_max:
+    name: Alarm - maximum unbalance (%)
+    description: Difference between phase currents.
+  panel_temp_warn:
+    name: Alarm - inverter temperature (°C)
+    description: High temperature warning.
+  panel_export_alarm:
+    name: Alarm - maximum export (W)
+    description: With zero export, warn above this power.

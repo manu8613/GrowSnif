@@ -1,5 +1,7 @@
 # GrowSnif
 
+Creado por [manu8613](https://github.com/manu8613/GrowSnif).
+
 Escucha **pasiva** de una instalación Growatt y la publica en Home Assistant por
 MQTT Discovery:
 
@@ -247,7 +249,80 @@ Comprobaciones:
 Después, revisa el panel Energía al día siguiente. Si en la hora del cambio ves un
 escalón, corrígelo en **Herramientas para desarrolladores → Estadísticas → Ajustar una suma**.
 
-## 9. Seguridad
+## 9. Panel Centro de control
+
+Activa `panel_install` y GrowSnif crea en la barra lateral el panel **Centro de control**,
+con tres pestañas:
+
+- **Control**: esquema unifilar con las líneas, red trifásica con diagrama fasorial,
+  generación, campo FV por MPPT y string, alarmas, balance y gráfica de 24 h, 7 o 30 días.
+- **Ahorro**: lo que la solar te evita pagar, hora a hora al precio de cada periodo.
+- **Impacto**: CO₂ evitado, árboles equivalentes y otras comparaciones.
+
+Es interactivo. Pulsa una línea, una fase, un MPPT, un string, la red o el inversor y se
+abre su ficha con el historial (24 h, 7 o 30 días), máximo, media y mínimo, y los datos
+relacionados. Pulsa cualquier valor y se abre el diálogo de Home Assistant de esa entidad.
+En las alarmas, *Entendido* las oculta 24 horas en ese navegador.
+
+Al arrancar, GrowSnif copia la tarjeta a `/config/www/growsnif/`, la registra como recurso
+con la versión del complemento en la dirección (así el navegador carga la tarjeta nueva
+tras cada actualización) y crea el panel con tus opciones. Si la tarjeta ya estaba
+instalada a mano, cambia ese recurso por el gestionado.
+
+| Opción | Por defecto | Qué es |
+|---|---|---|
+| `panel_install` | false | Instala el panel |
+| `panel_mode` | una_vez | `una_vez`: lo crea una vez y respeta lo que cambies después. `gestionado`: estas opciones mandan y el panel se reescribe cuando cambian, con copia del anterior |
+| `panel_url`, `panel_sidebar_title`, `panel_icon` | growsnif-control, Energía, mdi:transmission-tower | Dirección, nombre e icono en la barra lateral |
+| `panel_title`, `panel_subtitle` | Centro de control energético | Cabecera |
+| `panel_nominal_power` | 10000 | Potencia nominal del inversor, en W |
+| `panel_strings_per_mppt` | 0 | Strings por MPPT; 0 los reparte solo. MPPT y strings salen de `inverter_mppts` e `inverter_strings` |
+| `panel_lines` | [] | Líneas medidas: `name`, `power` y, si quieres, `code`, `energy`, `current` y `max` |
+| `panel_savings`, `panel_impact` | true | Pestañas Ahorro e Impacto (necesitan el inversor) |
+| `panel_price_entities` | [] | Seis entidades con el precio de la energía de P1 a P6 |
+| `panel_price_kwh` | 0 | Precio único si no tienes los seis |
+| `panel_price_now_entity`, `panel_cost_entity` | (vacío) | Precio actual y coste acumulado de la energía |
+| `panel_tax_factor` | 1 | Multiplicador de impuestos sobre el ahorro |
+| `panel_co2_entity`, `panel_co2_factor` | (vacío), 150 | Intensidad de CO₂ de la red en g/kWh |
+| `panel_pf_min`, `panel_voltage_min/max`, `panel_unbalance_max`, `panel_temp_warn`, `panel_export_alarm` | 0,95, 207/253, 25, 65, 1000 | Umbrales de las alarmas |
+
+Ejemplo de líneas:
+
+```yaml
+panel_lines:
+  - name: Oficinas planta 1
+    code: L01
+    power: sensor.oficinas_p1_potencia
+    energy: sensor.oficinas_p1_energia
+  - name: Compresores
+    power: sensor.compresores_potencia
+    max: 30000
+```
+
+El instalador no toca los buses RS485 y, si falla (por ejemplo, mientras Home Assistant
+arranca), lo reintenta y solo lo anota en el registro: la escucha sigue igual.
+
+La tarjeta también se puede usar sin el complemento: `growsnif/www/growsnif-panel.js` y
+[cards/README.md](https://github.com/manu8613/GrowSnif/blob/main/cards/README.md).
+
+## 10. Versiones y volver atrás
+
+Cada versión queda guardada en GitHub con su etiqueta (`v1.4.0`), su publicación con los
+cambios en **Releases** y una rama congelada (`version-1-4-0`).
+
+- **Volver a la versión anterior**: al actualizar, deja marcada *Crear copia de seguridad*.
+  Si la nueva no te vale, restaura esa copia en **Ajustes → Sistema → Copias de seguridad**:
+  vuelve el complemento con su versión y sus opciones.
+- **Instalar una versión concreta**: añade como repositorio
+  `https://github.com/manu8613/GrowSnif#version-1-3-0` (cambia el número). Aparece como otro
+  GrowSnif: instálalo, copia tus opciones y detén el que tenías. No tengas los dos en marcha.
+  Esa copia no recibe actualizaciones.
+- **El panel**: en modo `gestionado`, antes de reescribirlo se guarda el anterior en
+  `/config/growsnif/backups/`. Para recuperarlo, abre el panel, **⋮ → Editar → ⋮ →
+  Editor de configuración en bruto** y pega el contenido del archivo.
+- Las entidades no cambian entre versiones, así que volver atrás no pierde historial.
+
+## 11. Seguridad
 
 - Los sockets hacia la pasarela solo se leen. Las pruebas automáticas comprueban que no
   se envía ni un byte a ningún canal.
@@ -256,4 +331,13 @@ escalón, corrígelo en **Herramientas para desarrolladores → Estadísticas �
   su configuración. Ponla en una red o VLAN restringida, bloquea sus puertos desde otras
   redes, protege su configuración con contraseña y no la expongas a Internet.
 - No se guardan credenciales: MQTT las da el Supervisor en cada arranque.
-- El contenedor no usa red del host, ni privilegios, ni la API de Home Assistant.
+- El contenedor no usa red del host ni privilegios.
+- Los permisos de configuración (`/config`) y de la API de Home Assistant son solo para el
+  panel. Con `panel_install` desactivado no se usan. Activado, GrowSnif solo escribe en
+  `/config/www/growsnif/` y `/config/growsnif/`, y solo usa la API para el recurso y el panel.
+
+## 12. Autoría y licencia
+
+GrowSnif está creado por **manu8613** y publicado con licencia MIT. Si lo clonas, haces un
+fork o lo usas como base, mantén los archivos `LICENSE` y `NOTICE` y menciona a manu8613
+como autor original.

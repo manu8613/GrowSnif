@@ -68,3 +68,81 @@ configuration:
   inverter_device_name:
     name: Inversor - nombre del dispositivo
     description: Nombre que verás en Home Assistant.
+  panel_install:
+    name: Panel - instalar
+    description: Crea el panel Centro de control (Control, Ahorro e Impacto) y mantiene la tarjeta actualizada. Necesita los permisos de configuración y API, que solo se usan con esto activado.
+  panel_mode:
+    name: Panel - modo
+    description: 'una_vez: lo crea una vez y respeta lo que cambies después. gestionado: estas opciones mandan y el panel se reescribe al cambiarlas, guardando antes una copia en /config/growsnif/backups.'
+  panel_url:
+    name: Panel - dirección
+    description: Ruta del panel, con al menos un guion (p. ej. growsnif-control).
+  panel_title:
+    name: Panel - título
+    description: Título de la cabecera.
+  panel_subtitle:
+    name: Panel - subtítulo
+    description: Texto bajo el título (opcional).
+  panel_sidebar_title:
+    name: Panel - nombre en la barra lateral
+    description: Nombre del panel en el menú de Home Assistant.
+  panel_icon:
+    name: Panel - icono
+    description: Icono mdi del menú (p. ej. mdi:transmission-tower).
+  panel_nominal_power:
+    name: Panel - potencia nominal (W)
+    description: Potencia nominal del inversor en vatios.
+  panel_strings_per_mppt:
+    name: Panel - strings por MPPT
+    description: 0 = reparto automático entre los MPPT.
+  panel_zero_export:
+    name: Panel - vertido cero
+    description: Avisa si se vierte energía a la red.
+  panel_lines:
+    name: Panel - líneas medidas
+    description: 'Una por línea: name, power (entidad de potencia) y, si quieres, code, energy, current y max (W).'
+  panel_savings:
+    name: Panel - pestaña Ahorro
+    description: Muestra el ahorro hora a hora con los precios de cada periodo.
+  panel_impact:
+    name: Panel - pestaña Impacto
+    description: Muestra el CO₂ evitado y sus equivalencias.
+  panel_price_entities:
+    name: Panel - precios P1 a P6
+    description: Seis entidades con el precio de la energía de cada periodo (€/kWh), en orden.
+  panel_price_kwh:
+    name: Panel - precio único (€/kWh)
+    description: Si no tienes los seis precios. 0 = sin precio.
+  panel_price_now_entity:
+    name: Panel - precio actual
+    description: Entidad con el precio de la energía en este momento (opcional).
+  panel_cost_entity:
+    name: Panel - coste acumulado
+    description: Entidad del coste acumulado de la energía, para comparar con lo pagado (opcional).
+  panel_tax_factor:
+    name: Panel - factor de impuestos
+    description: Multiplica el ahorro. 1 = sin impuestos.
+  panel_co2_entity:
+    name: Panel - intensidad de CO₂
+    description: Entidad en g/kWh (p. ej. Electricity Maps), opcional.
+  panel_co2_factor:
+    name: Panel - CO₂ por kWh (g)
+    description: Valor fijo cuando no hay entidad de CO₂.
+  panel_pf_min:
+    name: Alarma - cos φ mínimo
+    description: Por debajo avisa de penalización por reactiva.
+  panel_voltage_min:
+    name: Alarma - tensión mínima (V)
+    description: Tensión fase-neutro mínima.
+  panel_voltage_max:
+    name: Alarma - tensión máxima (V)
+    description: Tensión fase-neutro máxima.
+  panel_unbalance_max:
+    name: Alarma - desequilibrio máximo (%)
+    description: Diferencia entre corrientes de fase.
+  panel_temp_warn:
+    name: Alarma - temperatura del inversor (°C)
+    description: Aviso por temperatura alta.
+  panel_export_alarm:
+    name: Alarma - vertido máximo (W)
+    description: Con vertido cero, avisa por encima de esta potencia.

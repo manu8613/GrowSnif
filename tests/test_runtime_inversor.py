@@ -140,7 +140,8 @@ with tempfile.TemporaryDirectory() as tmp:
         mqtt_host='127.0.0.1', mqtt_port=broker.getsockname()[1], mqtt_username='test', mqtt_password='test',
         id_prefix='prueba', device_name='Prueba', publish_interval=1,
         inverter_enabled=True, inverter_port=inverter_gw.getsockname()[1], inverter_address=1,
-        inverter_mppts=2, inverter_strings=0, inverter_id_prefix='prueba_inv', inverter_device_name='Inversor')))
+        inverter_mppts=2, inverter_strings=0, inverter_id_prefix='prueba_inv', inverter_device_name='Inversor',
+        panel_install=True)))   # sin Home Assistant: el instalador falla y la escucha sigue igual
     proc = subprocess.Popen([sys.executable, str(ROOT / 'growsnif/main.py')],
                             env={**os.environ, 'GROWSNIF_OPTIONS': str(path)},
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -162,6 +163,7 @@ with tempfile.TemporaryDirectory() as tmp:
         for s in (broker, meter_gw, inverter_gw):
             s.close()
     assert proc.returncode == 0, err.decode()
+    assert 'Panel:' in err.decode(), err.decode()[-500:]
     assert received == {'meter': b'', 'inverter': b''}, received
 
     configs = {}

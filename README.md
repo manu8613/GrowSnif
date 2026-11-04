@@ -2,6 +2,8 @@
 
 **Escucha pasiva del medidor CHINT DTSU666 y del inversor en instalaciones Growatt, para Home Assistant.**
 
+Creado por [manu8613](https://github.com/manu8613).
+
 *Passive sniffer for Growatt RS485 buses. It reads the traffic between the Growatt
 datalogger and the CHINT DTSU666 meter, and optionally the inverter, through a transparent
 RS485-to-TCP gateway and publishes the values to Home Assistant via MQTT Discovery. It
@@ -77,8 +79,10 @@ python test_runtime.py
 python test_runtime_inversor.py
 ```
 
-Hay también una tarjeta **Centro de control** con esquema unifilar, red trifásica,
-generación, campo FV, alarmas y balance: [cards/](cards/README.md).
+Activa `panel_install` y GrowSnif crea el panel **Centro de control**: esquema unifilar,
+red trifásica, generación, campo FV, alarmas, balance, ahorro hora a hora y CO₂ evitado,
+interactivo y configurable desde las opciones ([DOCS.md, sección 9](growsnif/DOCS.md)).
+La tarjeta también se puede instalar a mano: [cards/](cards/README.md).
 
 ¿Venías de la integración Growatt (nube)? `tools/migrar_nube_growatt.py` hace que las
 entidades locales hereden sus `entity_id` y su historial
@@ -94,6 +98,18 @@ python tools/capture.py --host <pasarela> --port 4196 --minutes 10 -o captures/b
 
 - ~~Escucha del bus datalogger ↔ inversor Growatt para tener la producción en local.~~ (1.3.0)
 
-## Licencia
+## Versiones
 
-MIT. Proyecto independiente, sin relación con Growatt, CHINT ni Waveshare.
+Cada versión tiene su etiqueta, su publicación en
+[Releases](https://github.com/manu8613/GrowSnif/releases) y una rama congelada
+`version-X-Y-Z` para instalar o volver a una versión concreta
+([DOCS.md, sección 10](growsnif/DOCS.md)). Se crean solas al subir una versión nueva y
+pasar las pruebas.
+
+## Autoría y licencia
+
+Creado por **[manu8613](https://github.com/manu8613)**. Licencia MIT: si clonas el
+repositorio, haces un fork o lo usas como base, mantén `LICENSE` y `NOTICE` y menciona
+a manu8613 como autor original.
+
+Proyecto independiente, sin relación con Growatt, CHINT ni Waveshare.

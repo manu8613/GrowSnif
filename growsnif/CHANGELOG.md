@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.4.0
+
+- **Panel Centro de control** instalado por el complemento (opción `panel_install`,
+  desactivada por defecto): copia la tarjeta, la registra con la versión en la dirección
+  y crea el panel con las pestañas Control, Ahorro e Impacto.
+- Todo configurable desde las opciones: líneas medidas, strings por MPPT, potencia
+  nominal, precios P1–P6, coste, impuestos, CO₂ y umbrales de las alarmas.
+- Modo `una_vez` (respeta tus cambios) o `gestionado` (las opciones mandan, con copia del
+  panel anterior en `/config/growsnif/backups/`).
+- Panel interactivo: ficha de detalle con historial de 24 h, 7 o 30 días para líneas,
+  fases, MPPT, strings, red e inversor; diálogo de Home Assistant al pulsar cualquier
+  dato; gráfica de 24 h, 7 o 30 días; alarmas que se pueden marcar como entendidas.
+- Permisos nuevos (configuración y API de Home Assistant), usados solo por el panel.
+- Versiones con etiqueta, publicación y rama congelada en GitHub para volver atrás.
+- Autoría: aviso `NOTICE` y mención al autor en el panel.
+- La escucha del medidor y del inversor no cambia.
+
 ## 1.3.0
 
 - **Inversor Growatt** (opcional, desactivado por defecto): escucha pasiva del bus

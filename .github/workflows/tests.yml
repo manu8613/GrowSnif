@@ -17,7 +17,8 @@ jobs:
           python-version: "3.13"
       - run: pip install paho-mqtt==2.1.0 pyyaml
       - name: El complemento nunca escribe en la pasarela
-        run: "! grep -nE '\\.(send|sendall|sendto|write)\\(' growsnif/*.py"
+        # Bus modules only. haws.py/panel.py talk to Home Assistant, never to the gateways.
+        run: "! grep -nE '\\.(send|sendall|sendto|write)\\(' growsnif/main.py growsnif/protocol.py growsnif/growatt.py growsnif/inverter.py"
       - name: Captura sintética regenerable y estable
         run: |
           python tools/make_synthetic_capture.py /tmp/captura.txt
@@ -37,6 +38,11 @@ jobs:
       - name: Extremo a extremo con el inversor (medidor sin cambios, cero bytes a las pasarelas)
         working-directory: tests
         run: python test_runtime_inversor.py
+      - name: Instalador del panel (Home Assistant simulado)
+        working-directory: tests
+        run: python -W error::ResourceWarning test_panel.py -v
+      - name: Sintaxis de la tarjeta
+        run: node --check growsnif/www/growsnif-panel.js
       - name: Migración desde la nube de Growatt (Home Assistant simulado)
         working-directory: tests
         run: python -W error::ResourceWarning test_migrar.py -v
@@ -52,3 +58,38 @@ jobs:
               assert set(cfg['options']) == set(cfg['schema']) == set(tr), lang
           print('YAML OK')
           PY
+
+  release:
+    # Cada versión nueva de growsnif/config.yaml, si las pruebas pasan:
+    # etiqueta vX.Y.Z, rama congelada version-X-Y-Z y publicación con su CHANGELOG.
+    needs: tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Etiqueta, rama de versión y publicación
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          publish() {  # publish VERSION COMMIT LATEST
+            git rev-parse -q --verify "refs/tags/v$1" >/dev/null && { echo "v$1 ya está publicada"; return; }
+            python3 tools/release_notes.py "$1" > "notes-$1.md"
+            git tag -a "v$1" "$2" -m "GrowSnif $1"
+            git push origin "v$1"
+            git ls-remote --exit-code --heads origin "version-${1//./-}" >/dev/null || git push origin "$2:refs/heads/version-${1//./-}"
+            gh release create "v$1" --title "GrowSnif $1" --notes-file "notes-$1.md" --latest="$3"
+          }
+          # Versiones anteriores con rama congelada y sin publicación todavía
+          for b in $(git branch -r --format='%(refname:short)' | grep '^origin/version-'); do
+            v=$(echo "${b#origin/version-}" | tr '-' '.')
+            publish "$v" "$b" false
+          done
+          # Versión actual
+          V=$(sed -n 's/^version: *//p' growsnif/config.yaml | tr -d '"' | tr -d "'")
+          publish "$V" HEAD true
