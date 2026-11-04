@@ -77,6 +77,9 @@ python test_runtime.py
 python test_runtime_inversor.py
 ```
 
+Hay también una tarjeta **Centro de control** con esquema unifilar, red trifásica,
+generación, campo FV, alarmas y balance: [cards/](cards/README.md).
+
 ¿Venías de la integración Growatt (nube)? `tools/migrar_nube_growatt.py` hace que las
 entidades locales hereden sus `entity_id` y su historial
 ([DOCS.md, sección 8](growsnif/DOCS.md)).
