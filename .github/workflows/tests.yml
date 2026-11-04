@@ -37,6 +37,9 @@ jobs:
       - name: Extremo a extremo con el inversor (medidor sin cambios, cero bytes a las pasarelas)
         working-directory: tests
         run: python test_runtime_inversor.py
+      - name: Migración desde la nube de Growatt (Home Assistant simulado)
+        working-directory: tests
+        run: python -W error::ResourceWarning test_migrar.py -v
       - name: YAML válido y opciones coherentes
         run: |
           python - <<'PY'

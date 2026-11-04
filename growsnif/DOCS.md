@@ -200,7 +200,54 @@ Inversor RX consultas=27 respuestas=27 escrituras=10 huerfanas=0 bytes_descartad
   `id_prefix` y la misma `meter_address`. Detén antes el complemento antiguo: dos copias
   a la vez se desconectan entre sí.
 
-## 8. Seguridad
+## 8. Dejar la nube de Growatt sin perder el historial
+
+Si ya tenías la integración **Growatt** (nube), `tools/migrar_nube_growatt.py` hace que
+las entidades locales del inversor **hereden los `entity_id`** de las de la nube. Home
+Assistant guarda historial y estadísticas por `entity_id`, así que la misma serie sigue
+sin cortes (panel Energía incluido) y tus paneles y automatizaciones siguen funcionando,
+ahora con datos locales.
+
+1. Activa el inversor en GrowSnif y espera a que tenga datos.
+2. Crea un token de larga duración de un usuario administrador
+   (**Perfil → Seguridad → Tokens de acceso de larga duración**).
+3. Desde cualquier PC con Python 3 (Windows incluido), sin instalar nada más:
+
+   ```
+   python migrar_nube_growatt.py --url http://IP_DE_HA:8123
+   ```
+
+   Es una **simulación**: muestra qué entidad hereda cada una y compara los contadores
+   de energía. No cambia nada.
+4. Si todo cuadra, haz una copia de seguridad de Home Assistant y repite con `--aplicar`.
+
+Al aplicar, el script:
+
+1. guarda en un `.json` el plan, las entidades y los paneles tal como estaban;
+2. **desactiva** la integración Growatt (no la borra: puedes volver a activarla);
+3. quita sus entidades del registro para liberar sus `entity_id`;
+4. renombra cada entidad local al `entity_id` de la nube que hereda;
+5. en los paneles, cambia las referencias a las entidades locales renombradas, y las de
+   la nube que no continúan por la que sí continúa (p. ej. la potencia del inversor por
+   la de la planta).
+
+Comprobaciones:
+
+- **No migra si los contadores de energía no coinciden** (por defecto, más de 10 kWh de
+  diferencia, `--tolerancia`). Una diferencia contaría como producción de golpe en el
+  panel Energía. Compara la *Energía total* (salida AC) del inversor, no la *Energía FV
+  total* (entrada de continua), que es mayor por las pérdidas del inversor.
+- Si hay entidades de la planta y del inversor con la misma magnitud, hereda la que está
+  en el panel Energía (o la de la planta).
+- Las entidades de la nube sin equivalente local (dinero, potencia máxima…) **conservan su
+  historial** en la base de datos, pero dejan de actualizarse. El script avisa si las usa
+  algún panel o automatización. No borres sus estadísticas "ya no proporcionadas".
+- Si alguna unidad no coincide, esa pareja no se toca.
+
+Después, revisa el panel Energía al día siguiente. Si en la hora del cambio ves un
+escalón, corrígelo en **Herramientas para desarrolladores → Estadísticas → Ajustar una suma**.
+
+## 9. Seguridad
 
 - Los sockets hacia la pasarela solo se leen. Las pruebas automáticas comprueban que no
   se envía ni un byte a ningún canal.

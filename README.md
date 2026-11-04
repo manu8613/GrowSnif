@@ -77,6 +77,10 @@ python test_runtime.py
 python test_runtime_inversor.py
 ```
 
+¿Venías de la integración Growatt (nube)? `tools/migrar_nube_growatt.py` hace que las
+entidades locales hereden sus `entity_id` y su historial
+([DOCS.md, sección 8](growsnif/DOCS.md)).
+
 Capturar tu propio bus (solo lectura):
 
 ```bash
